@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Overflow Rentals",
-    "slug": "overflow-rentals",
+    "slug": "turo-business-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -37,6 +37,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "98bbd266-0134-4dd1-b25e-8c9a80a38d2a"
+      }
+    },
+    "owner": "vavqo"
   }
 }
