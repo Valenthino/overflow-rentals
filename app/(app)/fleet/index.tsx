@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,9 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { formatCurrency, getStatusColor } from '@/lib/utils';
 import type { Vehicle, VehicleStatus } from '@/types/database';
 
@@ -41,6 +43,8 @@ export default function FleetScreen() {
   const { data: vehicles, loading, refresh, create, update, remove } = useSupabaseCrud<Vehicle>('vehicles', { orderBy: 'created_at' });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
   const [showModal, setShowModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [form, setForm] = useState({
@@ -98,7 +102,7 @@ export default function FleetScreen() {
     <SafeAreaView style={styles.container} edges={isDesktop ? [] : ['top']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={tokens.primary} />}
       >
         <ScreenHeader
           title="Fleet"
@@ -108,7 +112,7 @@ export default function FleetScreen() {
               title="Add Vehicle"
               onPress={() => { resetForm(); setShowModal(true); }}
               size="sm"
-              icon={<Ionicons name="add" size={16} color={colors.white} />}
+              icon={<Ionicons name="add" size={16} color={tokens.white} />}
             />
           }
         />
@@ -129,7 +133,7 @@ export default function FleetScreen() {
                   <CardContent style={styles.vehicleContent}>
                     <View style={styles.vehicleHeader}>
                       <View style={styles.vehicleIcon}>
-                        <Ionicons name="car-sport" size={24} color={colors.primary} />
+                        <Ionicons name="car-sport" size={24} color={tokens.primary} />
                       </View>
                       <Badge label={v.status} variant={STATUS_BADGE[v.status]} />
                     </View>
@@ -155,7 +159,7 @@ export default function FleetScreen() {
                       style={styles.deleteBtn}
                       onPress={() => remove(v.id)}
                     >
-                      <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                      <Ionicons name="trash-outline" size={14} color={tokens.danger} />
                     </TouchableOpacity>
                   </CardContent>
                 </Card>
@@ -201,23 +205,25 @@ export default function FleetScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
-  grid: { gap: spacing.md },
-  gridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
-  vehicleCard: { minWidth: 280 },
-  vehicleContent: { paddingTop: spacing.lg },
-  vehicleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  vehicleIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.primaryMuted, alignItems: 'center', justifyContent: 'center' },
-  vehicleName: { ...typography.heading3, marginBottom: 2 },
-  vehiclePlate: { ...typography.caption, marginBottom: spacing.md },
-  vehicleStats: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.sm },
-  stat: {},
-  statLabel: { ...typography.caption, marginBottom: 2 },
-  statValue: { fontSize: 15, fontWeight: '600', color: colors.text },
-  deleteBtn: { position: 'absolute', top: spacing.lg, right: 0, padding: spacing.xs },
-  formRow: { flexDirection: 'row', gap: spacing.md },
-  formHalf: { flex: 1 },
-  formActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.md },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
+    grid: { gap: spacing.md },
+    gridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
+    vehicleCard: { minWidth: 280 },
+    vehicleContent: { paddingTop: spacing.lg },
+    vehicleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+    vehicleIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: c.primaryMuted, alignItems: 'center', justifyContent: 'center' },
+    vehicleName: { ...typography.heading3, marginBottom: 2 },
+    vehiclePlate: { ...typography.caption, marginBottom: spacing.md },
+    vehicleStats: { flexDirection: 'row', gap: spacing.xl, marginTop: spacing.sm },
+    stat: {},
+    statLabel: { ...typography.caption, marginBottom: 2 },
+    statValue: { fontSize: 15, fontWeight: '600', color: c.text },
+    deleteBtn: { position: 'absolute', top: spacing.lg, right: 0, padding: spacing.xs },
+    formRow: { flexDirection: 'row', gap: spacing.md },
+    formHalf: { flex: 1 },
+    formActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.md },
+  });
+}

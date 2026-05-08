@@ -21,7 +21,9 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { KpiCard } from '@/components/charts/kpi-card';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { Expense, ExpenseCategory, Vehicle } from '@/types/database';
 
@@ -70,23 +72,25 @@ const CATEGORY_ICON: Record<ExpenseCategory, React.ComponentProps<typeof Ionicon
   other: 'ellipsis-horizontal-outline',
 };
 
-const CATEGORY_COLOR: Record<ExpenseCategory, string> = {
-  fuel: colors.chartOrange,
-  insurance: colors.chartBlue,
-  maintenance: colors.chartRed,
-  cleaning: colors.chartCyan,
-  tolls_tickets: colors.warning,
-  parking: colors.chartPink,
-  registration: colors.chartGreen,
-  financing: colors.chartPurple,
-  supplies: '#8B5CF6',
-  software: colors.info,
-  marketing: colors.chartPink,
-  office: colors.textMuted,
-  professional: colors.primary,
-  depreciation: colors.danger,
-  other: colors.textSecondary,
-};
+function makeCategoryColor(c: ColorTokens): Record<ExpenseCategory, string> {
+  return {
+    fuel: c.chartOrange,
+    insurance: c.chartBlue,
+    maintenance: c.chartRed,
+    cleaning: c.chartCyan,
+    tolls_tickets: c.warning,
+    parking: c.chartPink,
+    registration: c.chartGreen,
+    financing: c.chartPurple,
+    supplies: '#8B5CF6',
+    software: c.info,
+    marketing: c.chartPink,
+    office: c.textMuted,
+    professional: c.primary,
+    depreciation: c.danger,
+    other: c.textSecondary,
+  };
+}
 
 export default function ExpensesScreen() {
   const { data: expenses, loading, refresh, create, update, remove } =
@@ -94,6 +98,9 @@ export default function ExpensesScreen() {
   const { data: vehicles } = useSupabaseCrud<Vehicle>('vehicles');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
+  const CATEGORY_COLOR = useMemo(() => makeCategoryColor(tokens), [tokens]);
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
@@ -197,7 +204,7 @@ export default function ExpensesScreen() {
           <RefreshControl
             refreshing={false}
             onRefresh={refresh}
-            tintColor={colors.primary}
+            tintColor={tokens.primary}
           />
         }
       >
@@ -212,7 +219,7 @@ export default function ExpensesScreen() {
                 setShowModal(true);
               }}
               size="sm"
-              icon={<Ionicons name="add" size={16} color={colors.white} />}
+              icon={<Ionicons name="add" size={16} color={tokens.white} />}
             />
           }
         />
@@ -227,21 +234,21 @@ export default function ExpensesScreen() {
             label="Total Expenses"
             value={formatCurrency(kpis.total)}
             icon="wallet-outline"
-            iconColor={colors.danger}
+            iconColor={tokens.danger}
             style={styles.kpiCard}
           />
           <KpiCard
             label="Tax Deductible"
             value={formatCurrency(kpis.deductible)}
             icon="receipt-outline"
-            iconColor={colors.success}
+            iconColor={tokens.success}
             style={styles.kpiCard}
           />
           <KpiCard
             label="GST Total"
             value={formatCurrency(kpis.gstTotal)}
             icon="pricetag-outline"
-            iconColor={colors.info}
+            iconColor={tokens.info}
             style={styles.kpiCard}
           />
         </ScrollView>
@@ -310,7 +317,7 @@ export default function ExpensesScreen() {
                     <Ionicons
                       name="trash-outline"
                       size={14}
-                      color={colors.danger}
+                      color={tokens.danger}
                     />
                   </TouchableOpacity>
                 </View>
@@ -402,9 +409,9 @@ export default function ExpensesScreen() {
           <Switch
             value={form.is_tax_deductible}
             onValueChange={(v) => setForm({ ...form, is_tax_deductible: v })}
-            trackColor={{ false: colors.surface, true: colors.primaryMuted }}
+            trackColor={{ false: tokens.surface, true: tokens.primaryMuted }}
             thumbColor={
-              form.is_tax_deductible ? colors.primary : colors.textMuted
+              form.is_tax_deductible ? tokens.primary : tokens.textMuted
             }
           />
         </View>
@@ -448,81 +455,83 @@ export default function ExpensesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
-  kpiRow: {
-    gap: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  kpiCard: { minWidth: 160 },
-  listSection: { gap: 1 },
-  expenseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
-  },
-  categoryIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  expenseInfo: { flex: 1 },
-  expenseDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  expenseMeta: {
-    ...typography.caption,
-    marginTop: 2,
-  },
-  expenseRight: {
-    alignItems: 'flex-end',
-    gap: spacing.xs,
-  },
-  expenseAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  expenseBadges: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  deleteBtn: {
-    padding: spacing.xs,
-  },
-  formRow: { flexDirection: 'row', gap: spacing.md },
-  formHalf: { flex: 1 },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  toggleInfo: { flex: 1 },
-  toggleLabel: {
-    ...typography.label,
-    color: colors.text,
-  },
-  toggleHelper: {
-    ...typography.caption,
-    marginTop: 2,
-  },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
+    kpiRow: {
+      gap: spacing.md,
+      paddingBottom: spacing.xl,
+    },
+    kpiCard: { minWidth: 160 },
+    listSection: { gap: 1 },
+    expenseRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      gap: spacing.md,
+    },
+    categoryIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    expenseInfo: { flex: 1 },
+    expenseDescription: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: c.text,
+    },
+    expenseMeta: {
+      ...typography.caption,
+      marginTop: 2,
+    },
+    expenseRight: {
+      alignItems: 'flex-end',
+      gap: spacing.xs,
+    },
+    expenseAmount: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    expenseBadges: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+    },
+    deleteBtn: {
+      padding: spacing.xs,
+    },
+    formRow: { flexDirection: 'row', gap: spacing.md },
+    formHalf: { flex: 1 },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    toggleInfo: { flex: 1 },
+    toggleLabel: {
+      ...typography.label,
+      color: c.text,
+    },
+    toggleHelper: {
+      ...typography.caption,
+      marginTop: 2,
+    },
+    formActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+  });
+}

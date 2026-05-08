@@ -18,7 +18,9 @@ import { KpiCard } from '@/components/charts/kpi-card';
 import { AreaChart } from '@/components/charts/area-chart';
 import { DonutChart } from '@/components/charts/donut-chart';
 import { BarChart } from '@/components/charts/bar-chart';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { formatCurrency, formatPercent } from '@/lib/utils';
 import type { Trip, Expense, Payout, Vehicle } from '@/types/database';
 
@@ -79,6 +81,8 @@ export default function ReportsScreen() {
   const { settings } = useSettings();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
 
   const [activeTab, setActiveTab] = useState<TabKey>('pnl');
 
@@ -139,9 +143,9 @@ export default function ReportsScreen() {
       expenseByCategory[cat] = (expenseByCategory[cat] || 0) + e.amount;
     });
     const DONUT_COLORS = [
-      colors.chartPurple, colors.chartBlue, colors.chartGreen,
-      colors.chartOrange, colors.chartRed, colors.chartPink,
-      colors.chartCyan, '#8B5CF6', '#14B8A6', '#F97316',
+      tokens.chartPurple, tokens.chartBlue, tokens.chartGreen,
+      tokens.chartOrange, tokens.chartRed, tokens.chartPink,
+      tokens.chartCyan, '#8B5CF6', '#14B8A6', '#F97316',
     ];
     const donutData = Object.entries(expenseByCategory)
       .sort((a, b) => b[1] - a[1])
@@ -160,7 +164,7 @@ export default function ReportsScreen() {
       chartData,
       donutData,
     };
-  }, [trips, expenses, payouts]);
+  }, [trips, expenses, payouts, tokens]);
 
   // ========== VEHICLE ANALYSIS ==========
   const vehicleAnalysis = useMemo(() => {
@@ -234,7 +238,7 @@ export default function ReportsScreen() {
         return {
           label: `${(b.rate * 100).toFixed(0)}%`,
           value: tax,
-          color: tax > 0 ? colors.chartPurple : colors.surface,
+          color: tax > 0 ? tokens.chartPurple : tokens.surface,
         };
       });
 
@@ -250,7 +254,7 @@ export default function ReportsScreen() {
       secondaryLabel,
       bracketData,
     };
-  }, [pnl.netProfit, country]);
+  }, [pnl.netProfit, country, tokens]);
 
   // ========== RENDER ==========
   return (
@@ -261,7 +265,7 @@ export default function ReportsScreen() {
           <RefreshControl
             refreshing={false}
             onRefresh={handleRefresh}
-            tintColor={colors.primary}
+            tintColor={tokens.primary}
           />
         }
       >
@@ -286,7 +290,7 @@ export default function ReportsScreen() {
                 name={tab.icon}
                 size={16}
                 color={
-                  activeTab === tab.key ? colors.primary : colors.textMuted
+                  activeTab === tab.key ? tokens.primary : tokens.textMuted
                 }
               />
               <Text
@@ -314,28 +318,28 @@ export default function ReportsScreen() {
                 label="Total Revenue"
                 value={formatCurrency(pnl.totalRevenue)}
                 icon="trending-up-outline"
-                iconColor={colors.success}
+                iconColor={tokens.success}
                 style={styles.kpiCard}
               />
               <KpiCard
                 label="Total Expenses"
                 value={formatCurrency(pnl.totalExpenses)}
                 icon="trending-down-outline"
-                iconColor={colors.danger}
+                iconColor={tokens.danger}
                 style={styles.kpiCard}
               />
               <KpiCard
                 label="Total Payouts"
                 value={formatCurrency(pnl.totalPayouts)}
                 icon="wallet-outline"
-                iconColor={colors.warning}
+                iconColor={tokens.warning}
                 style={styles.kpiCard}
               />
               <KpiCard
                 label="Net Profit"
                 value={formatCurrency(pnl.netProfit)}
                 icon="cash-outline"
-                iconColor={pnl.netProfit >= 0 ? colors.success : colors.danger}
+                iconColor={pnl.netProfit >= 0 ? tokens.success : tokens.danger}
                 style={styles.kpiCard}
               />
             </ScrollView>
@@ -352,8 +356,8 @@ export default function ReportsScreen() {
                     data={pnl.chartData}
                     height={220}
                     showSecondary
-                    primaryColor={colors.primary}
-                    secondaryColor={colors.chartGreen}
+                    primaryColor={tokens.primary}
+                    secondaryColor={tokens.chartGreen}
                     primaryLabel="Revenue"
                     secondaryLabel="Net Profit"
                   />
@@ -394,20 +398,20 @@ export default function ReportsScreen() {
               <CardContent>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Revenue (from trips)</Text>
-                  <Text style={[styles.summaryValue, { color: colors.success }]}>
+                  <Text style={[styles.summaryValue, { color: tokens.success }]}>
                     {formatCurrency(pnl.totalRevenue)}
                   </Text>
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Less: Expenses</Text>
-                  <Text style={[styles.summaryValue, { color: colors.danger }]}>
+                  <Text style={[styles.summaryValue, { color: tokens.danger }]}>
                     -{formatCurrency(pnl.totalExpenses)}
                   </Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Less: Payouts</Text>
-                  <Text style={[styles.summaryValue, { color: colors.danger }]}>
+                  <Text style={[styles.summaryValue, { color: tokens.danger }]}>
                     -{formatCurrency(pnl.totalPayouts)}
                   </Text>
                 </View>
@@ -421,7 +425,7 @@ export default function ReportsScreen() {
                       styles.summaryValue,
                       {
                         fontWeight: '700',
-                        color: pnl.netProfit >= 0 ? colors.success : colors.danger,
+                        color: pnl.netProfit >= 0 ? tokens.success : tokens.danger,
                       },
                     ]}
                   >
@@ -465,7 +469,7 @@ export default function ReportsScreen() {
                         vehicleAnalysis.reduce((s, v) => s + v.revenue, 0)
                       )}
                       icon="car-sport-outline"
-                      iconColor={colors.success}
+                      iconColor={tokens.success}
                       style={styles.kpiCard}
                     />
                     <KpiCard
@@ -474,7 +478,7 @@ export default function ReportsScreen() {
                         vehicleAnalysis.reduce((s, v) => s + v.expenses, 0)
                       )}
                       icon="wallet-outline"
-                      iconColor={colors.danger}
+                      iconColor={tokens.danger}
                       style={styles.kpiCard}
                     />
                     <KpiCard
@@ -483,7 +487,7 @@ export default function ReportsScreen() {
                         vehicleAnalysis.reduce((s, v) => s + v.profit, 0)
                       )}
                       icon="trending-up-outline"
-                      iconColor={colors.primary}
+                      iconColor={tokens.primary}
                       style={styles.kpiCard}
                     />
                   </ScrollView>
@@ -502,10 +506,10 @@ export default function ReportsScreen() {
                           ? v.name.substring(0, 12)
                           : v.name,
                         value: v.revenue,
-                        color: colors.primary,
+                        color: tokens.primary,
                       }))}
                       height={200}
-                      barColor={colors.primary}
+                      barColor={tokens.primary}
                     />
                   </CardContent>
                 </Card>
@@ -555,7 +559,7 @@ export default function ReportsScreen() {
                             styles.tableCell,
                             {
                               color:
-                                v.profit >= 0 ? colors.success : colors.danger,
+                                v.profit >= 0 ? tokens.success : tokens.danger,
                               fontWeight: '600',
                             },
                           ]}
@@ -573,8 +577,8 @@ export default function ReportsScreen() {
                                 {
                                   color:
                                     v.margin >= 0
-                                      ? colors.success
-                                      : colors.danger,
+                                      ? tokens.success
+                                      : tokens.danger,
                                 },
                               ]}
                             >
@@ -616,28 +620,28 @@ export default function ReportsScreen() {
                 label="Taxable Income"
                 value={formatCurrency(taxForecast.taxableIncome)}
                 icon="cash-outline"
-                iconColor={colors.primary}
+                iconColor={tokens.primary}
                 style={styles.kpiCard}
               />
               <KpiCard
                 label="Estimated Tax"
                 value={formatCurrency(taxForecast.totalTax)}
                 icon="calculator-outline"
-                iconColor={colors.danger}
+                iconColor={tokens.danger}
                 style={styles.kpiCard}
               />
               <KpiCard
                 label="Effective Rate"
                 value={formatPercent(taxForecast.effectiveRate)}
                 icon="analytics-outline"
-                iconColor={colors.warning}
+                iconColor={tokens.warning}
                 style={styles.kpiCard}
               />
               <KpiCard
                 label="Monthly Set-Aside"
                 value={formatCurrency(taxForecast.monthlySetAside)}
                 icon="calendar-outline"
-                iconColor={colors.success}
+                iconColor={tokens.success}
                 style={styles.kpiCard}
               />
             </ScrollView>
@@ -660,7 +664,7 @@ export default function ReportsScreen() {
                   <Text style={styles.summaryLabel}>
                     {taxForecast.federalLabel}
                   </Text>
-                  <Text style={[styles.summaryValue, { color: colors.danger }]}>
+                  <Text style={[styles.summaryValue, { color: tokens.danger }]}>
                     {formatCurrency(taxForecast.federalTax)}
                   </Text>
                 </View>
@@ -668,7 +672,7 @@ export default function ReportsScreen() {
                   <Text style={styles.summaryLabel}>
                     {taxForecast.secondaryLabel}
                   </Text>
-                  <Text style={[styles.summaryValue, { color: colors.danger }]}>
+                  <Text style={[styles.summaryValue, { color: tokens.danger }]}>
                     {formatCurrency(taxForecast.stateTax)}
                   </Text>
                 </View>
@@ -678,7 +682,7 @@ export default function ReportsScreen() {
                       CPP Contributions (Self-Employed)
                     </Text>
                     <Text
-                      style={[styles.summaryValue, { color: colors.danger }]}
+                      style={[styles.summaryValue, { color: tokens.danger }]}
                     >
                       {formatCurrency(taxForecast.cpp)}
                     </Text>
@@ -694,7 +698,7 @@ export default function ReportsScreen() {
                   <Text
                     style={[
                       styles.summaryValue,
-                      { fontWeight: '700', color: colors.danger },
+                      { fontWeight: '700', color: tokens.danger },
                     ]}
                   >
                     {formatCurrency(taxForecast.totalTax)}
@@ -716,7 +720,7 @@ export default function ReportsScreen() {
                   <Text
                     style={[
                       styles.summaryValue,
-                      { fontWeight: '700', color: colors.warning },
+                      { fontWeight: '700', color: tokens.warning },
                     ]}
                   >
                     {formatCurrency(taxForecast.monthlySetAside)}
@@ -736,7 +740,7 @@ export default function ReportsScreen() {
                   <BarChart
                     data={taxForecast.bracketData}
                     height={180}
-                    barColor={colors.chartPurple}
+                    barColor={tokens.chartPurple}
                   />
                 ) : (
                   <Text style={styles.emptyChart}>
@@ -758,12 +762,12 @@ export default function ReportsScreen() {
                         0,
                         taxForecast.taxableIncome - taxForecast.totalTax
                       ),
-                      color: colors.chartGreen,
+                      color: tokens.chartGreen,
                     },
                     {
                       label: 'Tax',
                       value: taxForecast.totalTax,
-                      color: colors.chartRed,
+                      color: tokens.chartRed,
                     },
                   ]}
                   size={160}
@@ -781,7 +785,7 @@ export default function ReportsScreen() {
               <Ionicons
                 name="information-circle-outline"
                 size={16}
-                color={colors.textMuted}
+                color={tokens.textMuted}
               />
               <Text style={styles.disclaimerText}>
                 These are simplified estimates based on current brackets and
@@ -797,142 +801,144 @@ export default function ReportsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
 
-  // Tab Bar
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: colors.backgroundCard,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xs,
-    marginBottom: spacing.xl,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-  },
-  tabActive: {
-    backgroundColor: colors.primaryMuted,
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  tabTextActive: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  tabContent: { gap: spacing.lg },
+    // Tab Bar
+    tabBar: {
+      flexDirection: 'row',
+      backgroundColor: c.backgroundCard,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: spacing.xs,
+      marginBottom: spacing.xl,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.md,
+    },
+    tabActive: {
+      backgroundColor: c.primaryMuted,
+    },
+    tabText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: c.textMuted,
+    },
+    tabTextActive: {
+      color: c.primary,
+      fontWeight: '600',
+    },
+    tabContent: { gap: spacing.lg },
 
-  // KPIs
-  kpiRow: { gap: spacing.md, paddingBottom: spacing.sm },
-  kpiCard: { minWidth: 155 },
+    // KPIs
+    kpiRow: { gap: spacing.md, paddingBottom: spacing.sm },
+    kpiCard: { minWidth: 155 },
 
-  // Cards
-  chartCard: { marginBottom: 0 },
-  emptyChart: {
-    ...typography.bodySmall,
-    textAlign: 'center',
-    paddingVertical: spacing['3xl'],
-  },
+    // Cards
+    chartCard: { marginBottom: 0 },
+    emptyChart: {
+      ...typography.bodySmall,
+      textAlign: 'center',
+      paddingVertical: spacing['3xl'],
+    },
 
-  // P&L Summary Rows
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  summaryLabel: {
-    ...typography.body,
-    flex: 1,
-  },
-  summaryValue: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.xs,
-  },
+    // P&L Summary Rows
+    summaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    summaryLabel: {
+      ...typography.body,
+      flex: 1,
+    },
+    summaryValue: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: c.text,
+    },
+    summaryDivider: {
+      height: 1,
+      backgroundColor: c.border,
+      marginVertical: spacing.xs,
+    },
 
-  // Vehicle Table
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    marginBottom: spacing.xs,
-  },
-  tableHeaderCell: {
-    ...typography.caption,
-    flex: 1,
-    textAlign: 'right',
-  },
-  tableNameCol: {
-    flex: 2,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  tableName: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  tableTrips: {
-    ...typography.caption,
-    marginTop: 1,
-  },
-  tableCell: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.text,
-    textAlign: 'right',
-  },
+    // Vehicle Table
+    tableHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingBottom: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      marginBottom: spacing.xs,
+    },
+    tableHeaderCell: {
+      ...typography.caption,
+      flex: 1,
+      textAlign: 'right',
+    },
+    tableNameCol: {
+      flex: 2,
+    },
+    tableRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    tableName: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: c.text,
+    },
+    tableTrips: {
+      ...typography.caption,
+      marginTop: 1,
+    },
+    tableCell: {
+      flex: 1,
+      fontSize: 13,
+      color: c.text,
+      textAlign: 'right',
+    },
 
-  // Tax Country
-  countryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  countryNote: {
-    ...typography.caption,
-    flex: 1,
-  },
+    // Tax Country
+    countryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    countryNote: {
+      ...typography.caption,
+      flex: 1,
+    },
 
-  // Disclaimer
-  disclaimerContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginTop: spacing.sm,
-  },
-  disclaimerText: {
-    ...typography.caption,
-    flex: 1,
-    lineHeight: 18,
-  },
-});
+    // Disclaimer
+    disclaimerContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      marginTop: spacing.sm,
+    },
+    disclaimerText: {
+      ...typography.caption,
+      flex: 1,
+      lineHeight: 18,
+    },
+  });
+}

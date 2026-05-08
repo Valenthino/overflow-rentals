@@ -13,6 +13,10 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_qLO4FxD-5Kmd8ey0ZlhfFw_W8gPOndS"
       }
     },
+    "development-device": {
+      "extends": "development",
+      "ios": { "simulator": false }
+    },
     "preview": {
       "distribution": "internal",
       "channel": "preview",

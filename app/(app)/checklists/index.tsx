@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '@/components/shared/screen-header';
 import { Card, CardContent } from '@/components/ui/card';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 
 const PRE_TRIP_STEPS = [
   'Exterior photos — all 4 sides + close-ups of any damage',
@@ -58,6 +60,8 @@ type ChecklistTab = 'pre' | 'post';
 export default function ChecklistsScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
   const [activeTab, setActiveTab] = useState<ChecklistTab>('pre');
   const [preChecked, setPreChecked] = useState<boolean[]>(
     new Array(PRE_TRIP_STEPS.length).fill(false)
@@ -106,7 +110,7 @@ export default function ChecklistsScreen() {
             <Ionicons
               name="arrow-up-circle-outline"
               size={18}
-              color={activeTab === 'pre' ? colors.primary : colors.textMuted}
+              color={activeTab === 'pre' ? tokens.primary : tokens.textMuted}
             />
             <Text
               style={[
@@ -140,7 +144,7 @@ export default function ChecklistsScreen() {
             <Ionicons
               name="arrow-down-circle-outline"
               size={18}
-              color={activeTab === 'post' ? colors.primary : colors.textMuted}
+              color={activeTab === 'post' ? tokens.primary : tokens.textMuted}
             />
             <Text
               style={[
@@ -203,7 +207,7 @@ export default function ChecklistsScreen() {
                 <Ionicons
                   name="refresh-outline"
                   size={14}
-                  color={colors.textSecondary}
+                  color={tokens.textSecondary}
                 />
                 <Text style={styles.actionBtnText}>Reset</Text>
               </TouchableOpacity>
@@ -214,7 +218,7 @@ export default function ChecklistsScreen() {
                 <Ionicons
                   name="checkmark-done-outline"
                   size={14}
-                  color={colors.textSecondary}
+                  color={tokens.textSecondary}
                 />
                 <Text style={styles.actionBtnText}>Mark All</Text>
               </TouchableOpacity>
@@ -243,7 +247,7 @@ export default function ChecklistsScreen() {
                     <Ionicons
                       name="checkmark"
                       size={14}
-                      color={colors.white}
+                      color={tokens.white}
                     />
                   ) : (
                     <Text style={styles.numberText}>{index + 1}</Text>
@@ -265,7 +269,7 @@ export default function ChecklistsScreen() {
                   <Ionicons
                     name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
                     size={24}
-                    color={isChecked ? colors.success : colors.textMuted}
+                    color={isChecked ? tokens.success : tokens.textMuted}
                   />
                 </TouchableOpacity>
               </TouchableOpacity>
@@ -279,7 +283,7 @@ export default function ChecklistsScreen() {
             <Ionicons
               name="checkmark-circle"
               size={28}
-              color={colors.success}
+              color={tokens.success}
             />
             <View style={styles.completionTextWrap}>
               <Text style={styles.completionTitle}>
@@ -296,163 +300,165 @@ export default function ChecklistsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
 
-  /* Tabs */
-  tabRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tabActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryMuted,
-  },
-  tabText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
-  tabTextActive: { color: colors.primary },
-  tabCount: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-  },
-  tabCountActive: { backgroundColor: colors.primary },
-  tabCountText: { fontSize: 11, fontWeight: '700', color: colors.textMuted },
-  tabCountTextActive: { color: colors.white },
+    /* Tabs */
+    tabRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.md,
+      borderRadius: radius.lg,
+      backgroundColor: c.backgroundCard,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    tabActive: {
+      borderColor: c.primary,
+      backgroundColor: c.primaryMuted,
+    },
+    tabText: { fontSize: 14, fontWeight: '600', color: c.textMuted },
+    tabTextActive: { color: c.primary },
+    tabCount: {
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: radius.full,
+      backgroundColor: c.surface,
+    },
+    tabCountActive: { backgroundColor: c.primary },
+    tabCountText: { fontSize: 11, fontWeight: '700', color: c.textMuted },
+    tabCountTextActive: { color: c.white },
 
-  /* Progress */
-  progressCard: { marginBottom: spacing.lg },
-  progressContent: { paddingTop: spacing.lg },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  progressTitle: { ...typography.heading3, marginBottom: 2 },
-  progressSubtitle: { ...typography.caption },
-  progressPercent: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressPercentText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: colors.surface,
-    borderRadius: 3,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 3,
-  },
-  progressBarComplete: { backgroundColor: colors.success },
-  actionRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
-  },
-  actionBtnText: { fontSize: 12, fontWeight: '500', color: colors.textSecondary },
+    /* Progress */
+    progressCard: { marginBottom: spacing.lg },
+    progressContent: { paddingTop: spacing.lg },
+    progressHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    progressTitle: { ...typography.heading3, marginBottom: 2 },
+    progressSubtitle: { ...typography.caption },
+    progressPercent: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: c.primaryMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    progressPercentText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    progressBarBg: {
+      height: 6,
+      backgroundColor: c.surface,
+      borderRadius: 3,
+      marginBottom: spacing.md,
+      overflow: 'hidden',
+    },
+    progressBarFill: {
+      height: '100%',
+      backgroundColor: c.primary,
+      borderRadius: 3,
+    },
+    progressBarComplete: { backgroundColor: c.success },
+    actionRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    actionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
+      backgroundColor: c.surface,
+    },
+    actionBtnText: { fontSize: 12, fontWeight: '500', color: c.textSecondary },
 
-  /* Checklist Items */
-  checklistContainer: { gap: 2 },
-  checklistItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.backgroundCard,
-    marginBottom: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  numberCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  numberCircleChecked: {
-    backgroundColor: colors.success,
-  },
-  numberText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-  },
-  stepText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.text,
-    lineHeight: 20,
-  },
-  stepTextChecked: {
-    color: colors.textMuted,
-    textDecorationLine: 'line-through',
-  },
-  checkBtn: {
-    padding: 2,
-  },
+    /* Checklist Items */
+    checklistContainer: { gap: 2 },
+    checklistItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+      backgroundColor: c.backgroundCard,
+      marginBottom: spacing.xs,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    numberCircle: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: c.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    numberCircleChecked: {
+      backgroundColor: c.success,
+    },
+    numberText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.textMuted,
+    },
+    stepText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '400',
+      color: c.text,
+      lineHeight: 20,
+    },
+    stepTextChecked: {
+      color: c.textMuted,
+      textDecorationLine: 'line-through',
+    },
+    checkBtn: {
+      padding: 2,
+    },
 
-  /* Completion Banner */
-  completionBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.successMuted,
-    borderWidth: 1,
-    borderColor: colors.success,
-  },
-  completionTextWrap: { flex: 1 },
-  completionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.success,
-    marginBottom: 2,
-  },
-  completionSubtitle: {
-    fontSize: 13,
-    color: colors.success,
-    opacity: 0.8,
-  },
-});
+    /* Completion Banner */
+    completionBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      marginTop: spacing.lg,
+      padding: spacing.lg,
+      borderRadius: radius.lg,
+      backgroundColor: c.successMuted,
+      borderWidth: 1,
+      borderColor: c.success,
+    },
+    completionTextWrap: { flex: 1 },
+    completionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.success,
+      marginBottom: 2,
+    },
+    completionSubtitle: {
+      fontSize: 13,
+      color: c.success,
+      opacity: 0.8,
+    },
+  });
+}

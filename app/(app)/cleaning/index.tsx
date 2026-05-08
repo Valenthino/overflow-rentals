@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,9 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { Cleaning, CleaningType, CleaningStatus, Vehicle } from '@/types/database';
 
@@ -53,6 +55,8 @@ export default function CleaningScreen() {
   const { data: vehicles } = useSupabaseCrud<Vehicle>('vehicles');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Cleaning | null>(null);
   const [form, setForm] = useState({
@@ -129,7 +133,7 @@ export default function CleaningScreen() {
           <RefreshControl
             refreshing={false}
             onRefresh={refresh}
-            tintColor={colors.primary}
+            tintColor={tokens.primary}
           />
         }
       >
@@ -144,7 +148,7 @@ export default function CleaningScreen() {
                 setShowModal(true);
               }}
               size="sm"
-              icon={<Ionicons name="add" size={16} color={colors.white} />}
+              icon={<Ionicons name="add" size={16} color={tokens.white} />}
             />
           }
         />
@@ -175,7 +179,7 @@ export default function CleaningScreen() {
                         <Ionicons
                           name="sparkles"
                           size={24}
-                          color={colors.primary}
+                          color={tokens.primary}
                         />
                       </View>
                       <View style={styles.headerBadges}>
@@ -194,7 +198,7 @@ export default function CleaningScreen() {
                         <Ionicons
                           name="calendar-outline"
                           size={13}
-                          color={colors.textMuted}
+                          color={tokens.textMuted}
                         />
                         <Text style={styles.detailText}>
                           {formatDate(c.date)}
@@ -205,7 +209,7 @@ export default function CleaningScreen() {
                           <Ionicons
                             name="person-outline"
                             size={13}
-                            color={colors.textMuted}
+                            color={tokens.textMuted}
                           />
                           <Text style={styles.detailText}>{c.assigned_to}</Text>
                         </View>
@@ -231,7 +235,7 @@ export default function CleaningScreen() {
                       <Ionicons
                         name="trash-outline"
                         size={14}
-                        color={colors.danger}
+                        color={tokens.danger}
                       />
                     </TouchableOpacity>
                   </CardContent>
@@ -326,64 +330,66 @@ export default function CleaningScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
-  grid: { gap: spacing.md },
-  gridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
-  cleaningCard: { minWidth: 280 },
-  cleaningContent: { paddingTop: spacing.lg },
-  cleaningHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  cleaningIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerBadges: { flexDirection: 'row', gap: spacing.xs },
-  vehicleName: { ...typography.heading3, marginBottom: spacing.sm },
-  detailsGrid: { gap: 4, marginBottom: spacing.sm },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  detailText: { ...typography.bodySmall },
-  costRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  costLabel: { ...typography.caption },
-  costValue: { fontSize: 16, fontWeight: '700', color: colors.primary },
-  notesText: {
-    ...typography.bodySmall,
-    marginTop: spacing.sm,
-    fontStyle: 'italic',
-  },
-  deleteBtn: {
-    position: 'absolute',
-    top: spacing.lg,
-    right: 0,
-    padding: spacing.xs,
-  },
-  formRow: { flexDirection: 'row', gap: spacing.md },
-  formHalf: { flex: 1 },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
+    grid: { gap: spacing.md },
+    gridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
+    cleaningCard: { minWidth: 280 },
+    cleaningContent: { paddingTop: spacing.lg },
+    cleaningHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    cleaningIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.md,
+      backgroundColor: c.primaryMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerBadges: { flexDirection: 'row', gap: spacing.xs },
+    vehicleName: { ...typography.heading3, marginBottom: spacing.sm },
+    detailsGrid: { gap: 4, marginBottom: spacing.sm },
+    detailRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    detailText: { ...typography.bodySmall },
+    costRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: spacing.sm,
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+    },
+    costLabel: { ...typography.caption },
+    costValue: { fontSize: 16, fontWeight: '700', color: c.primary },
+    notesText: {
+      ...typography.bodySmall,
+      marginTop: spacing.sm,
+      fontStyle: 'italic',
+    },
+    deleteBtn: {
+      position: 'absolute',
+      top: spacing.lg,
+      right: 0,
+      padding: spacing.xs,
+    },
+    formRow: { flexDirection: 'row', gap: spacing.md },
+    formHalf: { flex: 1 },
+    formActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+  });
+}

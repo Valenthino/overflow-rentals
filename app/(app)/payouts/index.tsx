@@ -20,7 +20,9 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { KpiCard } from '@/components/charts/kpi-card';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { Payout, PayoutType } from '@/types/database';
 
@@ -48,19 +50,24 @@ const TYPE_ICON: Record<PayoutType, React.ComponentProps<typeof Ionicons>['name'
   other: 'ellipsis-horizontal-outline',
 };
 
-const TYPE_COLOR: Record<PayoutType, string> = {
-  owner_draw: colors.primary,
-  salary: colors.info,
-  bonus: colors.success,
-  reimbursement: colors.warning,
-  other: colors.textMuted,
-};
+function makeTypeColor(c: ColorTokens): Record<PayoutType, string> {
+  return {
+    owner_draw: c.primary,
+    salary: c.info,
+    bonus: c.success,
+    reimbursement: c.warning,
+    other: c.textMuted,
+  };
+}
 
 export default function PayoutsScreen() {
   const { data: payouts, loading, refresh, create, update, remove } =
     useSupabaseCrud<Payout>('payouts', { orderBy: 'date', ascending: false });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
+  const TYPE_COLOR = useMemo(() => makeTypeColor(tokens), [tokens]);
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Payout | null>(null);
@@ -158,7 +165,7 @@ export default function PayoutsScreen() {
           <RefreshControl
             refreshing={false}
             onRefresh={refresh}
-            tintColor={colors.primary}
+            tintColor={tokens.primary}
           />
         }
       >
@@ -173,7 +180,7 @@ export default function PayoutsScreen() {
                 setShowModal(true);
               }}
               size="sm"
-              icon={<Ionicons name="add" size={16} color={colors.white} />}
+              icon={<Ionicons name="add" size={16} color={tokens.white} />}
             />
           }
         />
@@ -188,7 +195,7 @@ export default function PayoutsScreen() {
             label="Total Payouts"
             value={formatCurrency(kpis.total)}
             icon="wallet-outline"
-            iconColor={colors.primary}
+            iconColor={tokens.primary}
             style={styles.kpiCard}
           />
           {Object.entries(kpis.byType).map(([label, amount]) => (
@@ -197,7 +204,7 @@ export default function PayoutsScreen() {
               label={label}
               value={formatCurrency(amount)}
               icon="cash-outline"
-              iconColor={colors.info}
+              iconColor={tokens.info}
               style={styles.kpiCard}
             />
           ))}
@@ -261,7 +268,7 @@ export default function PayoutsScreen() {
                     <Ionicons
                       name="trash-outline"
                       size={14}
-                      color={colors.danger}
+                      color={tokens.danger}
                     />
                   </TouchableOpacity>
                 </View>
@@ -282,9 +289,9 @@ export default function PayoutsScreen() {
         size="md"
       >
         {formError ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.dangerMuted, padding: spacing.md, borderRadius: radius.md }}>
-            <Ionicons name="alert-circle" size={16} color={colors.danger} />
-            <Text style={{ color: colors.danger, fontSize: 13, flex: 1 }}>{formError}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: tokens.dangerMuted, padding: spacing.md, borderRadius: radius.md }}>
+            <Ionicons name="alert-circle" size={16} color={tokens.danger} />
+            <Text style={{ color: tokens.danger, fontSize: 13, flex: 1 }}>{formError}</Text>
           </View>
         ) : null}
         <View style={styles.formRow}>
@@ -350,55 +357,57 @@ export default function PayoutsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
-  kpiRow: { gap: spacing.md, paddingBottom: spacing.xl },
-  kpiCard: { minWidth: 155 },
-  listSection: { gap: 1 },
-  payoutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
-  },
-  typeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  payoutInfo: { flex: 1 },
-  payoutRecipient: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  payoutMeta: {
-    ...typography.caption,
-    marginTop: 2,
-  },
-  payoutRight: {
-    alignItems: 'flex-end',
-    gap: spacing.xs,
-  },
-  payoutAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  deleteBtn: {
-    padding: spacing.xs,
-  },
-  formRow: { flexDirection: 'row', gap: spacing.md },
-  formHalf: { flex: 1 },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
+    kpiRow: { gap: spacing.md, paddingBottom: spacing.xl },
+    kpiCard: { minWidth: 155 },
+    listSection: { gap: 1 },
+    payoutRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      gap: spacing.md,
+    },
+    typeIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    payoutInfo: { flex: 1 },
+    payoutRecipient: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: c.text,
+    },
+    payoutMeta: {
+      ...typography.caption,
+      marginTop: 2,
+    },
+    payoutRight: {
+      alignItems: 'flex-end',
+      gap: spacing.xs,
+    },
+    payoutAmount: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    deleteBtn: {
+      padding: spacing.xs,
+    },
+    formRow: { flexDirection: 'row', gap: spacing.md },
+    formHalf: { flex: 1 },
+    formActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+  });
+}

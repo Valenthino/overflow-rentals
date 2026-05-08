@@ -24,8 +24,11 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { KpiCard } from '@/components/charts/kpi-card';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { formatCurrency, formatDate, parseDollar } from '@/lib/utils';
+import { pickCsvFile } from '@/lib/csv-file-picker';
 import type { Trip, TripStatus } from '@/types/database';
 
 // ---------------------------------------------------------------------------
@@ -416,6 +419,8 @@ export default function TripsScreen() {
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
 
   // Trip form modal state
   const [showModal, setShowModal] = useState(false);
@@ -429,6 +434,8 @@ export default function TripsScreen() {
   const [csvParsed, setCsvParsed] = useState<Partial<Trip>[]>([]);
   const [csvWarnings, setCsvWarnings] = useState<{ line: number; field: string; reason: string }[]>([]);
   const [csvError, setCsvError] = useState('');
+  const [csvFileName, setCsvFileName] = useState('');
+  const [picking, setPicking] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState('');
 
@@ -593,8 +600,39 @@ export default function TripsScreen() {
     setCsvParsed([]);
     setCsvWarnings([]);
     setCsvError('');
+    setCsvFileName('');
     setImportResult('');
     setShowCsvModal(false);
+  };
+
+  const handleUploadCsv = async () => {
+    setCsvError('');
+    setImportResult('');
+    setCsvWarnings([]);
+    setPicking(true);
+    try {
+      const result = await pickCsvFile();
+      if (!result.ok) {
+        if (result.reason === 'error') setCsvError(result.message);
+        return;
+      }
+      setCsvFileName(result.name);
+      setCsvText(result.text);
+      // Auto-parse on successful upload so the user sees the preview immediately.
+      try {
+        const { rows, warnings } = parseCsv(result.text);
+        if (rows.length === 0) {
+          setCsvError('No valid rows found in the uploaded file.');
+          return;
+        }
+        setCsvParsed(rows);
+        setCsvWarnings(warnings);
+      } catch (e: any) {
+        setCsvError(e?.message || 'Failed to parse uploaded CSV.');
+      }
+    } finally {
+      setPicking(false);
+    }
   };
 
   // -----------------------------------------------------------------------
@@ -619,7 +657,7 @@ export default function TripsScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={refresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={false} onRefresh={refresh} tintColor={tokens.primary} />
         }
       >
         {/* Header */}
@@ -633,7 +671,7 @@ export default function TripsScreen() {
                 variant="outline"
                 onPress={() => setShowCsvModal(true)}
                 size="sm"
-                icon={<Ionicons name="cloud-upload-outline" size={14} color={colors.text} />}
+                icon={<Ionicons name="cloud-upload-outline" size={14} color={tokens.text} />}
               />
               <Button
                 title="Add Trip"
@@ -642,7 +680,7 @@ export default function TripsScreen() {
                   setShowModal(true);
                 }}
                 size="sm"
-                icon={<Ionicons name="add" size={16} color={colors.white} />}
+                icon={<Ionicons name="add" size={16} color={tokens.white} />}
               />
             </View>
           }
@@ -654,21 +692,21 @@ export default function TripsScreen() {
             label="Total Trips"
             value={stats.total.toString()}
             icon="car-outline"
-            iconColor={colors.primary}
+            iconColor={tokens.primary}
             style={styles.kpiCard}
           />
           <KpiCard
             label="Total Earnings"
             value={formatCurrency(stats.totalEarnings)}
             icon="cash-outline"
-            iconColor={colors.success}
+            iconColor={tokens.success}
             style={styles.kpiCard}
           />
           <KpiCard
             label="Avg / Trip"
             value={formatCurrency(stats.avgEarnings)}
             icon="trending-up-outline"
-            iconColor={colors.info}
+            iconColor={tokens.info}
             style={styles.kpiCard}
           />
         </View>
@@ -698,7 +736,7 @@ export default function TripsScreen() {
                     {/* Top row: guest + status */}
                     <View style={styles.tripHeader}>
                       <View style={styles.tripIcon}>
-                        <Ionicons name="person-outline" size={20} color={colors.primary} />
+                        <Ionicons name="person-outline" size={20} color={tokens.primary} />
                       </View>
                       <Badge label={trip.status} variant={STATUS_BADGE[trip.status]} />
                     </View>
@@ -715,7 +753,7 @@ export default function TripsScreen() {
 
                     {/* Dates */}
                     <View style={styles.tripDatesRow}>
-                      <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                      <Ionicons name="calendar-outline" size={13} color={tokens.textMuted} />
                       <Text style={styles.tripDatesText}>{renderTripDates(trip)}</Text>
                       {trip.days > 0 && (
                         <Text style={styles.tripDaysText}>
@@ -732,7 +770,7 @@ export default function TripsScreen() {
                       </View>
                       <View style={styles.stat}>
                         <Text style={styles.statLabel}>Earnings</Text>
-                        <Text style={[styles.statValue, { color: colors.success }]}>
+                        <Text style={[styles.statValue, { color: tokens.success }]}>
                           {formatCurrency(trip.total_earnings)}
                         </Text>
                       </View>
@@ -747,7 +785,7 @@ export default function TripsScreen() {
                       }}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                      <Ionicons name="trash-outline" size={14} color={tokens.danger} />
                     </TouchableOpacity>
                   </CardContent>
                 </Card>
@@ -1028,23 +1066,40 @@ export default function TripsScreen() {
         size="lg"
       >
         <Text style={styles.csvDescription}>
-          Paste your Turo CSV export data below. The first row should be the
-          header row. Supported columns include: Reservation ID, Vehicle, Guest,
-          Status, Trip Start, Trip End, Days, Trip Price, Discounts, Extras,
-          Delivery Fee, Other Fees, Sales Tax, Host Fee, Total Earnings, and more.
+          Upload a Turo CSV export, or paste the rows below. The first row
+          should be the header. We auto-detect Turo's columns (Reservation ID,
+          Vehicle, Guest, Status, Trip Start/End, Days, prices, fees, earnings)
+          and clean up vehicle names that include the owner prefix.
         </Text>
+
+        {/* Upload CSV file */}
+        <Button
+          title={csvFileName ? `File: ${csvFileName}` : 'Upload CSV file'}
+          variant="primary"
+          onPress={handleUploadCsv}
+          loading={picking}
+          fullWidth
+          icon={<Ionicons name="cloud-upload-outline" size={16} color={tokens.white} />}
+        />
+
+        <View style={styles.csvOrRow}>
+          <View style={styles.csvOrLine} />
+          <Text style={styles.csvOrText}>OR PASTE BELOW</Text>
+          <View style={styles.csvOrLine} />
+        </View>
 
         {/* CSV paste area */}
         <View style={styles.csvInputWrapper}>
           <TextInput
             style={styles.csvInput}
             placeholder="Paste CSV data here..."
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={tokens.textMuted}
             value={csvText}
             onChangeText={(v) => {
               setCsvText(v);
               setCsvParsed([]);
               setCsvError('');
+              setCsvFileName('');
               setImportResult('');
             }}
             multiline
@@ -1054,36 +1109,36 @@ export default function TripsScreen() {
 
         {/* Parse button */}
         <Button
-          title="Parse CSV"
+          title="Parse pasted text"
           variant="secondary"
           onPress={handleParseCsv}
-          disabled={!csvText.trim()}
-          icon={<Ionicons name="code-slash-outline" size={14} color={colors.text} />}
+          disabled={!csvText.trim() || !!csvFileName}
+          icon={<Ionicons name="code-slash-outline" size={14} color={tokens.text} />}
         />
 
         {/* Error display */}
         {csvError ? (
           <View style={styles.csvErrorBox}>
-            <Ionicons name="alert-circle" size={16} color={colors.danger} />
+            <Ionicons name="alert-circle" size={16} color={tokens.danger} />
             <Text style={styles.csvErrorText}>{csvError}</Text>
           </View>
         ) : null}
 
         {/* Warnings display */}
         {csvWarnings.length > 0 ? (
-          <View style={[styles.csvErrorBox, { backgroundColor: colors.warningMuted }]}>
-            <Ionicons name="warning-outline" size={16} color={colors.warning} />
+          <View style={[styles.csvErrorBox, { backgroundColor: tokens.warningMuted }]}>
+            <Ionicons name="warning-outline" size={16} color={tokens.warning} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.csvErrorText, { color: colors.warning, fontWeight: '600' }]}>
+              <Text style={[styles.csvErrorText, { color: tokens.warning, fontWeight: '600' }]}>
                 {csvWarnings.length} warning{csvWarnings.length !== 1 ? 's' : ''} (rows imported with defaults):
               </Text>
               {csvWarnings.slice(0, 5).map((w, i) => (
-                <Text key={i} style={[styles.csvErrorText, { color: colors.warning }]}>
+                <Text key={i} style={[styles.csvErrorText, { color: tokens.warning }]}>
                   Line {w.line}, {w.field}: {w.reason}
                 </Text>
               ))}
               {csvWarnings.length > 5 ? (
-                <Text style={[styles.csvErrorText, { color: colors.warning }]}>
+                <Text style={[styles.csvErrorText, { color: tokens.warning }]}>
                   …and {csvWarnings.length - 5} more
                 </Text>
               ) : null}
@@ -1095,7 +1150,7 @@ export default function TripsScreen() {
         {csvParsed.length > 0 && (
           <View style={styles.csvPreview}>
             <View style={styles.csvPreviewHeader}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Ionicons name="checkmark-circle" size={16} color={tokens.success} />
               <Text style={styles.csvPreviewTitle}>
                 {csvParsed.length} trip{csvParsed.length !== 1 ? 's' : ''} found
               </Text>
@@ -1136,7 +1191,7 @@ export default function TripsScreen() {
         {/* Import result */}
         {importResult ? (
           <View style={styles.csvSuccessBox}>
-            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={16} color={tokens.success} />
             <Text style={styles.csvSuccessText}>{importResult}</Text>
           </View>
         ) : null}
@@ -1149,7 +1204,7 @@ export default function TripsScreen() {
               title={`Import ${csvParsed.length} Trip${csvParsed.length !== 1 ? 's' : ''}`}
               onPress={handleImportCsv}
               loading={importing}
-              icon={<Ionicons name="cloud-upload-outline" size={14} color={colors.white} />}
+              icon={<Ionicons name="cloud-upload-outline" size={14} color={tokens.white} />}
             />
           )}
           {importResult && (
@@ -1165,244 +1220,263 @@ export default function TripsScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing['5xl'],
-  },
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    scrollContent: {
+      padding: spacing.lg,
+      paddingBottom: spacing['5xl'],
+    },
 
-  // Header actions
-  headerActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
+    // Header actions
+    headerActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
 
-  // KPI row
-  kpiRow: {
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  kpiRowDesktop: {
-    flexDirection: 'row',
-  },
-  kpiCard: {
-    flex: 1,
-  },
+    // KPI row
+    kpiRow: {
+      gap: spacing.md,
+      marginBottom: spacing.xl,
+    },
+    kpiRowDesktop: {
+      flexDirection: 'row',
+    },
+    kpiCard: {
+      flex: 1,
+    },
 
-  // Trip grid
-  grid: {
-    gap: spacing.md,
-  },
-  gridDesktop: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
+    // Trip grid
+    grid: {
+      gap: spacing.md,
+    },
+    gridDesktop: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
 
-  // Trip card
-  tripCard: {
-    minWidth: 280,
-  },
-  tripContent: {
-    paddingTop: spacing.lg,
-  },
-  tripHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  tripIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tripGuestName: {
-    ...typography.heading3,
-    marginBottom: 2,
-  },
-  tripVehicleName: {
-    ...typography.bodySmall,
-    marginBottom: spacing.sm,
-  },
-  tripDatesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: spacing.md,
-  },
-  tripDatesText: {
-    ...typography.caption,
-    flex: 1,
-  },
-  tripDaysText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.primary,
-    backgroundColor: colors.primaryMuted,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-  },
-  tripStats: {
-    flexDirection: 'row',
-    gap: spacing.xl,
-    marginTop: spacing.sm,
-  },
-  stat: {},
-  statLabel: {
-    ...typography.caption,
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  deleteBtn: {
-    position: 'absolute',
-    top: spacing.lg,
-    right: 0,
-    padding: spacing.xs,
-  },
+    // Trip card
+    tripCard: {
+      minWidth: 280,
+    },
+    tripContent: {
+      paddingTop: spacing.lg,
+    },
+    tripHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    tripIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.md,
+      backgroundColor: c.primaryMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tripGuestName: {
+      ...typography.heading3,
+      marginBottom: 2,
+    },
+    tripVehicleName: {
+      ...typography.bodySmall,
+      marginBottom: spacing.sm,
+    },
+    tripDatesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: spacing.md,
+    },
+    tripDatesText: {
+      ...typography.caption,
+      flex: 1,
+    },
+    tripDaysText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.primary,
+      backgroundColor: c.primaryMuted,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: radius.full,
+      overflow: 'hidden',
+    },
+    tripStats: {
+      flexDirection: 'row',
+      gap: spacing.xl,
+      marginTop: spacing.sm,
+    },
+    stat: {},
+    statLabel: {
+      ...typography.caption,
+      marginBottom: 2,
+    },
+    statValue: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.text,
+    },
+    deleteBtn: {
+      position: 'absolute',
+      top: spacing.lg,
+      right: 0,
+      padding: spacing.xs,
+    },
 
-  // Delete confirmation
-  deleteConfirmText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
+    // Delete confirmation
+    deleteConfirmText: {
+      ...typography.body,
+      color: c.textSecondary,
+    },
 
-  // Form
-  formRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  formHalf: {
-    flex: 1,
-  },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  formSectionLabel: {
-    ...typography.label,
-    color: colors.primary,
-    marginTop: spacing.sm,
-    marginBottom: -spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontSize: 12,
-    fontWeight: '600',
-  },
+    // Form
+    formRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    formHalf: {
+      flex: 1,
+    },
+    formActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+    formSectionLabel: {
+      ...typography.label,
+      color: c.primary,
+      marginTop: spacing.sm,
+      marginBottom: -spacing.xs,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      fontSize: 12,
+      fontWeight: '600',
+    },
 
-  // CSV modal
-  csvDescription: {
-    ...typography.bodySmall,
-    lineHeight: 20,
-  },
-  csvInputWrapper: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 160,
-    maxHeight: 240,
-  },
-  csvInput: {
-    flex: 1,
-    padding: spacing.md,
-    color: colors.text,
-    fontSize: 13,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    minHeight: 160,
-    textAlignVertical: 'top',
-  },
-  csvErrorBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.dangerMuted,
-    padding: spacing.md,
-    borderRadius: radius.md,
-  },
-  csvErrorText: {
-    ...typography.bodySmall,
-    color: colors.danger,
-    flex: 1,
-  },
-  csvSuccessBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.successMuted,
-    padding: spacing.md,
-    borderRadius: radius.md,
-  },
-  csvSuccessText: {
-    ...typography.bodySmall,
-    color: colors.success,
-    flex: 1,
-  },
-  csvPreview: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  csvPreviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  csvPreviewTitle: {
-    ...typography.label,
-    color: colors.success,
-  },
-  csvPreviewList: {
-    maxHeight: 200,
-  },
-  csvPreviewRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  csvPreviewRowNum: {
-    ...typography.caption,
-    width: 24,
-    marginTop: 2,
-  },
-  csvPreviewRowContent: {
-    flex: 1,
-  },
-  csvPreviewRowTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  csvPreviewRowSub: {
-    ...typography.caption,
-    marginTop: 2,
-  },
-  csvPreviewMore: {
-    ...typography.caption,
-    textAlign: 'center',
-    paddingVertical: spacing.sm,
-    color: colors.textMuted,
-  },
-});
+    // CSV modal
+    csvDescription: {
+      ...typography.bodySmall,
+      lineHeight: 20,
+    },
+    csvOrRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginVertical: spacing.xs,
+    },
+    csvOrLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: c.border,
+    },
+    csvOrText: {
+      ...typography.caption,
+      letterSpacing: 1,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    csvInputWrapper: {
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      minHeight: 160,
+      maxHeight: 240,
+    },
+    csvInput: {
+      flex: 1,
+      padding: spacing.md,
+      color: c.text,
+      fontSize: 13,
+      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+      minHeight: 160,
+      textAlignVertical: 'top',
+    },
+    csvErrorBox: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      backgroundColor: c.dangerMuted,
+      padding: spacing.md,
+      borderRadius: radius.md,
+    },
+    csvErrorText: {
+      ...typography.bodySmall,
+      color: c.danger,
+      flex: 1,
+    },
+    csvSuccessBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: c.successMuted,
+      padding: spacing.md,
+      borderRadius: radius.md,
+    },
+    csvSuccessText: {
+      ...typography.bodySmall,
+      color: c.success,
+      flex: 1,
+    },
+    csvPreview: {
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      overflow: 'hidden',
+    },
+    csvPreviewHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      padding: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    csvPreviewTitle: {
+      ...typography.label,
+      color: c.success,
+    },
+    csvPreviewList: {
+      maxHeight: 200,
+    },
+    csvPreviewRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    csvPreviewRowNum: {
+      ...typography.caption,
+      width: 24,
+      marginTop: 2,
+    },
+    csvPreviewRowContent: {
+      flex: 1,
+    },
+    csvPreviewRowTitle: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: c.text,
+    },
+    csvPreviewRowSub: {
+      ...typography.caption,
+      marginTop: 2,
+    },
+    csvPreviewMore: {
+      ...typography.caption,
+      textAlign: 'center',
+      paddingVertical: spacing.sm,
+      color: c.textMuted,
+    },
+  });
+}

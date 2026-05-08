@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import type { ColorTokens } from '@/lib/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, session } = useAuth();
   const { tokens, typography } = useTheme();
   const t = useT();
   const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
@@ -34,6 +34,11 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    // Layout will route new users to /(app)/onboarding when settings.onboarding_complete is missing.
+    if (session) router.replace('/(app)');
+  }, [session]);
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {

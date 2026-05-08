@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,9 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import type { Renter } from '@/types/database';
 
 const FLAG_OPTIONS = [
@@ -32,6 +34,8 @@ export default function RentersScreen() {
     useSupabaseCrud<Renter>('renters', { orderBy: 'created_at' });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Renter | null>(null);
   const [form, setForm] = useState({
@@ -114,12 +118,12 @@ export default function RentersScreen() {
     const stars = [];
     for (let i = 0; i < full; i++) {
       stars.push(
-        <Ionicons key={`f${i}`} name="star" size={12} color={colors.warning} />
+        <Ionicons key={`f${i}`} name="star" size={12} color={tokens.warning} />
       );
     }
     if (half) {
       stars.push(
-        <Ionicons key="h" name="star-half" size={12} color={colors.warning} />
+        <Ionicons key="h" name="star-half" size={12} color={tokens.warning} />
       );
     }
     return (
@@ -140,7 +144,7 @@ export default function RentersScreen() {
           <RefreshControl
             refreshing={false}
             onRefresh={refresh}
-            tintColor={colors.primary}
+            tintColor={tokens.primary}
           />
         }
       >
@@ -155,7 +159,7 @@ export default function RentersScreen() {
                 setShowModal(true);
               }}
               size="sm"
-              icon={<Ionicons name="add" size={16} color={colors.white} />}
+              icon={<Ionicons name="add" size={16} color={tokens.white} />}
             />
           }
         />
@@ -204,7 +208,7 @@ export default function RentersScreen() {
                         <Ionicons
                           name="mail-outline"
                           size={13}
-                          color={colors.textMuted}
+                          color={tokens.textMuted}
                         />
                         <Text style={styles.infoText}>{r.email}</Text>
                       </View>
@@ -214,7 +218,7 @@ export default function RentersScreen() {
                         <Ionicons
                           name="call-outline"
                           size={13}
-                          color={colors.textMuted}
+                          color={tokens.textMuted}
                         />
                         <Text style={styles.infoText}>{r.phone}</Text>
                       </View>
@@ -238,7 +242,7 @@ export default function RentersScreen() {
                         <Ionicons
                           name="warning"
                           size={13}
-                          color={colors.danger}
+                          color={tokens.danger}
                         />
                         <Text style={styles.flagText}>{r.flag_reason}</Text>
                       </View>
@@ -250,7 +254,7 @@ export default function RentersScreen() {
                       <Ionicons
                         name="trash-outline"
                         size={14}
-                        color={colors.danger}
+                        color={tokens.danger}
                       />
                     </TouchableOpacity>
                   </CardContent>
@@ -376,79 +380,81 @@ export default function RentersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
-  grid: { gap: spacing.md },
-  gridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
-  renterCard: { minWidth: 280 },
-  renterContent: { paddingTop: spacing.lg },
-  renterHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  headerBadges: { flexDirection: 'row', gap: spacing.xs },
-  renterName: { ...typography.heading3, marginBottom: 4 },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: 3,
-  },
-  infoText: { ...typography.bodySmall },
-  renterStats: {
-    flexDirection: 'row',
-    gap: spacing.xl,
-    marginTop: spacing.md,
-  },
-  stat: {},
-  statLabel: { ...typography.caption, marginBottom: 2 },
-  statValue: { fontSize: 15, fontWeight: '600', color: colors.text },
-  starsRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  ratingText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-    marginLeft: 4,
-  },
-  flagBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.dangerMuted,
-    borderRadius: radius.sm,
-  },
-  flagText: { fontSize: 12, color: colors.danger, flex: 1 },
-  deleteBtn: {
-    position: 'absolute',
-    top: spacing.lg,
-    right: 0,
-    padding: spacing.xs,
-  },
-  formRow: { flexDirection: 'row', gap: spacing.md },
-  formHalf: { flex: 1 },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
+    grid: { gap: spacing.md },
+    gridDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
+    renterCard: { minWidth: 280 },
+    renterContent: { paddingTop: spacing.lg },
+    renterHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    avatarCircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: c.primaryMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    headerBadges: { flexDirection: 'row', gap: spacing.xs },
+    renterName: { ...typography.heading3, marginBottom: 4 },
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginBottom: 3,
+    },
+    infoText: { ...typography.bodySmall },
+    renterStats: {
+      flexDirection: 'row',
+      gap: spacing.xl,
+      marginTop: spacing.md,
+    },
+    stat: {},
+    statLabel: { ...typography.caption, marginBottom: 2 },
+    statValue: { fontSize: 15, fontWeight: '600', color: c.text },
+    starsRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+    ratingText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.text,
+      marginLeft: 4,
+    },
+    flagBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      backgroundColor: c.dangerMuted,
+      borderRadius: radius.sm,
+    },
+    flagText: { fontSize: 12, color: c.danger, flex: 1 },
+    deleteBtn: {
+      position: 'absolute',
+      top: spacing.lg,
+      right: 0,
+      padding: spacing.xs,
+    },
+    formRow: { flexDirection: 'row', gap: spacing.md },
+    formHalf: { flex: 1 },
+    formActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+  });
+}

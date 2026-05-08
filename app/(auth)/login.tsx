@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import type { ColorTokens } from '@/lib/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, session } = useAuth();
   const { tokens, typography } = useTheme();
   const t = useT();
   const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
@@ -32,6 +32,10 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (session) router.replace('/(app)');
+  }, [session]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -43,8 +47,8 @@ export default function LoginScreen() {
     const result = await signIn(email.trim(), password);
     if (result.error) {
       setError(result.error.message);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

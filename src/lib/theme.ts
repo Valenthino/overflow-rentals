@@ -170,8 +170,6 @@ export const tokens: Record<ResolvedTheme, ColorTokens> = {
   light: colorsLight,
 };
 
-export const colors: ColorTokens = colorsDark;
-
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -254,8 +252,6 @@ export function makeTypography(c: ColorTokens) {
     },
   };
 }
-
-export const typography = makeTypography(colorsDark);
 
 export const shadows = Platform.select({
   ios: {

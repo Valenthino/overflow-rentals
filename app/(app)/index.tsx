@@ -12,6 +12,7 @@ import { useDashboard } from '@/hooks/useDashboard';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useT } from '@/providers/LocaleProvider';
 import { ScreenHeader } from '@/components/shared/screen-header';
+import { MaintenanceReminderBanner } from '@/components/shared/maintenance-reminder-banner';
 import { KpiCard } from '@/components/charts/kpi-card';
 import { AreaChart } from '@/components/charts/area-chart';
 import { DonutChart } from '@/components/charts/donut-chart';
@@ -54,6 +55,8 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
+
+        <MaintenanceReminderBanner />
 
         <View style={[styles.kpiGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
           <KpiCard

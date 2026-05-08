@@ -20,7 +20,9 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import type { TeamMember, TeamRole, PayType } from '@/types/database';
 
 const ROLE_OPTIONS = [
@@ -70,6 +72,8 @@ export default function TeamScreen() {
     useSupabaseCrud<TeamMember>('team_members', { orderBy: 'created_at' });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
 
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [showModal, setShowModal] = useState(false);
@@ -147,7 +151,7 @@ export default function TeamScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={refresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={false} onRefresh={refresh} tintColor={tokens.primary} />
         }
       >
         <ScreenHeader
@@ -161,7 +165,7 @@ export default function TeamScreen() {
                 setShowModal(true);
               }}
               size="sm"
-              icon={<Ionicons name="add" size={16} color={colors.white} />}
+              icon={<Ionicons name="add" size={16} color={tokens.white} />}
             />
           }
         />
@@ -230,7 +234,7 @@ export default function TeamScreen() {
                         <Ionicons
                           name={ROLE_ICON[member.role] as any}
                           size={22}
-                          color={colors.primary}
+                          color={tokens.primary}
                         />
                       </View>
                       <View style={styles.memberHeaderRight}>
@@ -240,8 +244,8 @@ export default function TeamScreen() {
                             styles.activeDot,
                             {
                               backgroundColor: member.is_active
-                                ? colors.success
-                                : colors.textMuted,
+                                ? tokens.success
+                                : tokens.textMuted,
                             },
                           ]}
                         />
@@ -254,7 +258,7 @@ export default function TeamScreen() {
                     {/* Contact info */}
                     {member.email && (
                       <View style={styles.contactRow}>
-                        <Ionicons name="mail-outline" size={13} color={colors.textMuted} />
+                        <Ionicons name="mail-outline" size={13} color={tokens.textMuted} />
                         <Text style={styles.contactText} numberOfLines={1}>
                           {member.email}
                         </Text>
@@ -262,7 +266,7 @@ export default function TeamScreen() {
                     )}
                     {member.phone && (
                       <View style={styles.contactRow}>
-                        <Ionicons name="call-outline" size={13} color={colors.textMuted} />
+                        <Ionicons name="call-outline" size={13} color={tokens.textMuted} />
                         <Text style={styles.contactText}>{member.phone}</Text>
                       </View>
                     )}
@@ -281,7 +285,7 @@ export default function TeamScreen() {
                     <Text
                       style={[
                         styles.statusLabel,
-                        { color: member.is_active ? colors.success : colors.textMuted },
+                        { color: member.is_active ? tokens.success : tokens.textMuted },
                       ]}
                     >
                       {member.is_active ? 'Active' : 'Inactive'}
@@ -292,7 +296,7 @@ export default function TeamScreen() {
                       style={styles.deleteBtn}
                       onPress={() => remove(member.id)}
                     >
-                      <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                      <Ionicons name="trash-outline" size={14} color={tokens.danger} />
                     </TouchableOpacity>
                   </CardContent>
                 </Card>
@@ -372,8 +376,8 @@ export default function TeamScreen() {
           <Switch
             value={form.is_active}
             onValueChange={(v) => setForm({ ...form, is_active: v })}
-            trackColor={{ false: colors.surface, true: colors.primaryMuted }}
-            thumbColor={form.is_active ? colors.primary : colors.textMuted}
+            trackColor={{ false: tokens.surface, true: tokens.primaryMuted }}
+            thumbColor={form.is_active ? tokens.primary : tokens.textMuted}
           />
         </View>
 
@@ -406,188 +410,190 @@ export default function TeamScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing['5xl'],
-  },
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    scrollContent: {
+      padding: spacing.lg,
+      paddingBottom: spacing['5xl'],
+    },
 
-  // Filter tabs
-  tabRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tabActive: {
-    backgroundColor: colors.primaryMuted,
-    borderColor: colors.primary,
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  tabTextActive: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  tabCount: {
-    backgroundColor: colors.backgroundElevated,
-    borderRadius: radius.full,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  tabCountActive: {
-    backgroundColor: colors.primary,
-  },
-  tabCountText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  tabCountTextActive: {
-    color: colors.white,
-  },
+    // Filter tabs
+    tabRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.xl,
+    },
+    tab: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.full,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    tabActive: {
+      backgroundColor: c.primaryMuted,
+      borderColor: c.primary,
+    },
+    tabText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: c.textSecondary,
+    },
+    tabTextActive: {
+      color: c.primary,
+      fontWeight: '600',
+    },
+    tabCount: {
+      backgroundColor: c.backgroundElevated,
+      borderRadius: radius.full,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      minWidth: 20,
+      alignItems: 'center',
+    },
+    tabCountActive: {
+      backgroundColor: c.primary,
+    },
+    tabCountText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textMuted,
+    },
+    tabCountTextActive: {
+      color: c.white,
+    },
 
-  // Grid
-  grid: {
-    gap: spacing.md,
-  },
-  gridDesktop: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
+    // Grid
+    grid: {
+      gap: spacing.md,
+    },
+    gridDesktop: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
 
-  // Member card
-  memberCard: {
-    minWidth: 280,
-  },
-  memberContent: {
-    paddingTop: spacing.lg,
-  },
-  memberHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  memberIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  memberName: {
-    ...typography.heading3,
-    marginBottom: spacing.sm,
-  },
+    // Member card
+    memberCard: {
+      minWidth: 280,
+    },
+    memberContent: {
+      paddingTop: spacing.lg,
+    },
+    memberHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    memberIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.md,
+      backgroundColor: c.primaryMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    memberHeaderRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    activeDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    memberName: {
+      ...typography.heading3,
+      marginBottom: spacing.sm,
+    },
 
-  // Contact
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: 4,
-  },
-  contactText: {
-    ...typography.bodySmall,
-    flex: 1,
-  },
+    // Contact
+    contactRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginBottom: 4,
+    },
+    contactText: {
+      ...typography.bodySmall,
+      flex: 1,
+    },
 
-  // Pay
-  payRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 2,
-    marginTop: spacing.sm,
-  },
-  payRate: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  payType: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
+    // Pay
+    payRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 2,
+      marginTop: spacing.sm,
+    },
+    payRate: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.primary,
+    },
+    payType: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: c.textMuted,
+    },
 
-  // Status
-  statusLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+    // Status
+    statusLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      marginTop: spacing.sm,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
 
-  deleteBtn: {
-    position: 'absolute',
-    top: spacing.lg,
-    right: 0,
-    padding: spacing.xs,
-  },
+    deleteBtn: {
+      position: 'absolute',
+      top: spacing.lg,
+      right: 0,
+      padding: spacing.xs,
+    },
 
-  // Form
-  formRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  formHalf: {
-    flex: 1,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  toggleLabel: {
-    ...typography.label,
-    marginBottom: 2,
-  },
-  toggleHelper: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-});
+    // Form
+    formRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    formHalf: {
+      flex: 1,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    toggleLabel: {
+      ...typography.label,
+      marginBottom: 2,
+    },
+    toggleHelper: {
+      fontSize: 12,
+      color: c.textMuted,
+    },
+    formActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+  });
+}

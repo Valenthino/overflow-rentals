@@ -21,7 +21,9 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { KpiCard } from '@/components/charts/kpi-card';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { formatDate, formatCurrency, formatPercent } from '@/lib/utils';
 import type { Claim, ClaimStatus, ClaimCategory, Vehicle } from '@/types/database';
 
@@ -87,6 +89,8 @@ export default function ClaimsScreen() {
   const { data: vehicles } = useSupabaseCrud<Vehicle>('vehicles');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Claim | null>(null);
@@ -204,7 +208,7 @@ export default function ClaimsScreen() {
           <RefreshControl
             refreshing={false}
             onRefresh={refresh}
-            tintColor={colors.primary}
+            tintColor={tokens.primary}
           />
         }
       >
@@ -219,7 +223,7 @@ export default function ClaimsScreen() {
                 setShowModal(true);
               }}
               size="sm"
-              icon={<Ionicons name="add" size={16} color={colors.white} />}
+              icon={<Ionicons name="add" size={16} color={tokens.white} />}
             />
           }
         />
@@ -234,28 +238,28 @@ export default function ClaimsScreen() {
             label="Total Claims"
             value={kpis.totalClaims.toString()}
             icon="document-text-outline"
-            iconColor={colors.info}
+            iconColor={tokens.info}
             style={styles.kpiCard}
           />
           <KpiCard
             label="Total Claimed"
             value={formatCurrency(kpis.totalClaimed)}
             icon="trending-up-outline"
-            iconColor={colors.warning}
+            iconColor={tokens.warning}
             style={styles.kpiCard}
           />
           <KpiCard
             label="Total Received"
             value={formatCurrency(kpis.totalReceived)}
             icon="checkmark-circle-outline"
-            iconColor={colors.success}
+            iconColor={tokens.success}
             style={styles.kpiCard}
           />
           <KpiCard
             label="Recovery Rate"
             value={formatPercent(kpis.recoveryRate)}
             icon="analytics-outline"
-            iconColor={colors.primary}
+            iconColor={tokens.primary}
             style={styles.kpiCard}
           />
         </ScrollView>
@@ -292,13 +296,13 @@ export default function ClaimsScreen() {
                               <View
                                 style={[
                                   styles.claimIcon,
-                                  { backgroundColor: colors.primaryMuted },
+                                  { backgroundColor: tokens.primaryMuted },
                                 ]}
                               >
                                 <Ionicons
                                   name={CATEGORY_ICON[c.category]}
                                   size={18}
-                                  color={colors.primary}
+                                  color={tokens.primary}
                                 />
                               </View>
                               <Text style={styles.claimCategory}>
@@ -333,7 +337,7 @@ export default function ClaimsScreen() {
                             <Ionicons
                               name="arrow-forward"
                               size={14}
-                              color={colors.textMuted}
+                              color={tokens.textMuted}
                             />
                             <View>
                               <Text style={styles.amountLabel}>Received</Text>
@@ -343,8 +347,8 @@ export default function ClaimsScreen() {
                                   {
                                     color:
                                       c.received_amount > 0
-                                        ? colors.success
-                                        : colors.textMuted,
+                                        ? tokens.success
+                                        : tokens.textMuted,
                                   },
                                 ]}
                               >
@@ -371,7 +375,7 @@ export default function ClaimsScreen() {
                             <Ionicons
                               name="trash-outline"
                               size={14}
-                              color={colors.danger}
+                              color={tokens.danger}
                             />
                           </TouchableOpacity>
                         </CardContent>
@@ -396,13 +400,13 @@ export default function ClaimsScreen() {
                       <View
                         style={[
                           styles.listIcon,
-                          { backgroundColor: `${colors.textMuted}18` },
+                          { backgroundColor: `${tokens.textMuted}18` },
                         ]}
                       >
                         <Ionicons
                           name={CATEGORY_ICON[c.category]}
                           size={16}
-                          color={colors.textMuted}
+                          color={tokens.textMuted}
                         />
                       </View>
                       <View style={styles.listInfo}>
@@ -540,9 +544,9 @@ export default function ClaimsScreen() {
             onValueChange={(v) =>
               setForm({ ...form, is_insurance_claim: v })
             }
-            trackColor={{ false: colors.surface, true: colors.primaryMuted }}
+            trackColor={{ false: tokens.surface, true: tokens.primaryMuted }}
             thumbColor={
-              form.is_insurance_claim ? colors.primary : colors.textMuted
+              form.is_insurance_claim ? tokens.primary : tokens.textMuted
             }
           />
         </View>
@@ -589,126 +593,128 @@ export default function ClaimsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
-  kpiRow: { gap: spacing.md, paddingBottom: spacing.xl },
-  kpiCard: { minWidth: 155 },
-  section: { marginBottom: spacing.xl },
-  sectionTitle: { ...typography.heading3, marginBottom: spacing.md },
-  cardGrid: { gap: spacing.md },
-  claimHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  claimCategoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  claimIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  claimCategory: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  claimVehicle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  claimRenter: {
-    ...typography.bodySmall,
-    marginBottom: spacing.xs,
-  },
-  claimDescription: {
-    ...typography.bodySmall,
-    marginBottom: spacing.md,
-  },
-  claimAmounts: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  amountLabel: {
-    ...typography.caption,
-    marginBottom: 2,
-  },
-  amountValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  claimDate: {
-    ...typography.caption,
-    marginTop: spacing.xs,
-  },
-  deleteBtn: {
-    position: 'absolute',
-    top: spacing.lg,
-    right: 0,
-    padding: spacing.xs,
-  },
-  listRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.md,
-  },
-  listIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  listInfo: { flex: 1 },
-  listName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  listSub: {
-    ...typography.caption,
-    marginTop: 2,
-  },
-  formRow: { flexDirection: 'row', gap: spacing.md },
-  formHalf: { flex: 1 },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  toggleInfo: { flex: 1 },
-  toggleLabel: {
-    ...typography.label,
-    color: colors.text,
-  },
-  toggleHelper: {
-    ...typography.caption,
-    marginTop: 2,
-  },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
+    kpiRow: { gap: spacing.md, paddingBottom: spacing.xl },
+    kpiCard: { minWidth: 155 },
+    section: { marginBottom: spacing.xl },
+    sectionTitle: { ...typography.heading3, marginBottom: spacing.md },
+    cardGrid: { gap: spacing.md },
+    claimHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    claimCategoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    claimIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    claimCategory: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.textSecondary,
+    },
+    claimVehicle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: c.text,
+      marginBottom: 2,
+    },
+    claimRenter: {
+      ...typography.bodySmall,
+      marginBottom: spacing.xs,
+    },
+    claimDescription: {
+      ...typography.bodySmall,
+      marginBottom: spacing.md,
+    },
+    claimAmounts: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    amountLabel: {
+      ...typography.caption,
+      marginBottom: 2,
+    },
+    amountValue: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: c.text,
+    },
+    claimDate: {
+      ...typography.caption,
+      marginTop: spacing.xs,
+    },
+    deleteBtn: {
+      position: 'absolute',
+      top: spacing.lg,
+      right: 0,
+      padding: spacing.xs,
+    },
+    listRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      gap: spacing.md,
+    },
+    listIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    listInfo: { flex: 1 },
+    listName: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: c.text,
+    },
+    listSub: {
+      ...typography.caption,
+      marginTop: 2,
+    },
+    formRow: { flexDirection: 'row', gap: spacing.md },
+    formHalf: { flex: 1 },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    toggleInfo: { flex: 1 },
+    toggleLabel: {
+      ...typography.label,
+      color: c.text,
+    },
+    toggleHelper: {
+      ...typography.caption,
+      marginTop: 2,
+    },
+    formActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+  });
+}

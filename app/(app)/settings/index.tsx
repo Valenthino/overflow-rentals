@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useSettings } from '@/hooks/useSupabaseCrud';
 import { ScreenHeader } from '@/components/shared/screen-header';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { CommunityCard } from '@/components/shared/community-card';
 import { spacing, radius } from '@/lib/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -61,6 +63,7 @@ const TIMEZONE_OPTIONS = [
 ];
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { settings, loading, updateSetting, refresh } = useSettings();
   const { user, signOut } = useAuth();
   const { width } = useWindowDimensions();
@@ -297,6 +300,8 @@ export default function SettingsScreen() {
             </CardContent>
           </Card>
 
+          <CommunityCard />
+
           <Card style={styles.settingsCard}>
             <CardHeader title={t('settings.account')} subtitle="Your login and session" />
             <CardContent style={styles.cardBody}>
@@ -319,6 +324,17 @@ export default function SettingsScreen() {
               </View>
 
               <View style={styles.divider} />
+
+              <Button
+                title="Replay onboarding"
+                variant="outline"
+                onPress={async () => {
+                  await updateSetting('onboarding_complete', 'false');
+                  router.replace('/(app)/onboarding' as any);
+                }}
+                fullWidth
+                icon={<Ionicons name="refresh-outline" size={16} color={tokens.text} />}
+              />
 
               <Button
                 title={t('settings.sign_out')}
