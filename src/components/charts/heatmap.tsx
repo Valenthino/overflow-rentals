@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-import { colors, spacing, typography } from '@/lib/theme';
+import { spacing } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useT } from '@/providers/LocaleProvider';
+import { format } from 'date-fns';
+import type { ColorTokens } from '@/lib/theme';
 
 interface HeatmapData {
   date: string;
@@ -15,15 +19,6 @@ interface HeatmapProps {
   cellGap?: number;
 }
 
-const DAYS = ['Mon', '', 'Wed', '', 'Fri', '', ''];
-const INTENSITY_COLORS = [
-  colors.surface,
-  'rgba(89, 60, 251, 0.2)',
-  'rgba(89, 60, 251, 0.4)',
-  'rgba(89, 60, 251, 0.65)',
-  colors.primary,
-];
-
 function getIntensity(count: number, max: number): number {
   if (count === 0) return 0;
   if (max === 0) return 0;
@@ -34,7 +29,22 @@ function getIntensity(count: number, max: number): number {
   return 4;
 }
 
-export function Heatmap({ data, weeks = 20, cellSize = 12, cellGap = 3 }: HeatmapProps) {
+function intensityColors(c: ColorTokens): string[] {
+  return [
+    c.surface,
+    'rgba(89, 60, 251, 0.20)',
+    'rgba(89, 60, 251, 0.40)',
+    'rgba(89, 60, 251, 0.65)',
+    c.primary,
+  ];
+}
+
+export function Heatmap({ data, weeks = 20, cellSize = 14, cellGap = 4 }: HeatmapProps) {
+  const { tokens, typography } = useTheme();
+  const t = useT();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
+
+  const palette = intensityColors(tokens);
   const maxCount = Math.max(...data.map((d) => d.count), 1);
   const totalCells = weeks * 7;
   const lookupMap = new Map(data.map((d) => [d.date, d.count]));
@@ -45,12 +55,14 @@ export function Heatmap({ data, weeks = 20, cellSize = 12, cellGap = 3 }: Heatma
   for (let i = totalCells - 1; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    const key = date.toISOString().split('T')[0];
+    const key = format(date, 'yyyy-MM-dd');
     const weekIdx = Math.floor((totalCells - 1 - i) / 7);
     const dayIdx = date.getDay();
     const adjustedDay = dayIdx === 0 ? 6 : dayIdx - 1;
     cells.push({ week: weekIdx, day: adjustedDay, count: lookupMap.get(key) ?? 0 });
   }
+
+  const days = ['', t('charts.weekday_mon'), '', t('charts.weekday_wed'), '', t('charts.weekday_fri'), ''];
 
   const svgWidth = weeks * (cellSize + cellGap) + 30;
   const svgHeight = 7 * (cellSize + cellGap) + 10;
@@ -59,7 +71,7 @@ export function Heatmap({ data, weeks = 20, cellSize = 12, cellGap = 3 }: Heatma
     <View>
       <View style={styles.container}>
         <View style={styles.dayLabels}>
-          {DAYS.map((d, i) => (
+          {days.map((d, i) => (
             <Text
               key={i}
               style={[styles.dayLabel, { height: cellSize + cellGap, lineHeight: cellSize + cellGap }]}
@@ -76,50 +88,52 @@ export function Heatmap({ data, weeks = 20, cellSize = 12, cellGap = 3 }: Heatma
               y={cell.day * (cellSize + cellGap)}
               width={cellSize}
               height={cellSize}
-              rx={2}
-              fill={INTENSITY_COLORS[getIntensity(cell.count, maxCount)]}
+              rx={3}
+              fill={palette[getIntensity(cell.count, maxCount)]}
             />
           ))}
         </Svg>
       </View>
       <View style={styles.legend}>
-        <Text style={styles.legendText}>Less</Text>
-        {INTENSITY_COLORS.map((color, i) => (
+        <Text style={styles.legendText}>{t('charts.less')}</Text>
+        {palette.map((color, i) => (
           <View key={i} style={[styles.legendCell, { backgroundColor: color }]} />
         ))}
-        <Text style={styles.legendText}>More</Text>
+        <Text style={styles.legendText}>{t('charts.more')}</Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  dayLabels: {
-    justifyContent: 'flex-start',
-  },
-  dayLabel: {
-    ...typography.caption,
-    fontSize: 9,
-    width: 24,
-  },
-  legend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 3,
-    marginTop: spacing.sm,
-  },
-  legendCell: {
-    width: 10,
-    height: 10,
-    borderRadius: 2,
-  },
-  legendText: {
-    ...typography.caption,
-    fontSize: 9,
-  },
-});
+function makeStyles(_c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+    },
+    dayLabels: {
+      justifyContent: 'flex-start',
+    },
+    dayLabel: {
+      ...typography.caption,
+      fontSize: 9,
+      width: 28,
+    },
+    legend: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 3,
+      marginTop: spacing.sm,
+    },
+    legendCell: {
+      width: 12,
+      height: 12,
+      borderRadius: 3,
+    },
+    legendText: {
+      ...typography.caption,
+      fontSize: 9,
+    },
+  });
+}

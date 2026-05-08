@@ -1,28 +1,31 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
-import { NAV_ITEMS, SECTION_LABELS } from '@/constants/navigation';
-import { colors, radius, spacing, typography } from '@/lib/theme';
+import { NAV_ITEMS, SECTION_KEYS } from '@/constants/navigation';
+import { radius, spacing } from '@/lib/theme';
 import { useAuth } from '@/providers/AuthProvider';
+import { useTokens } from '@/providers/ThemeProvider';
+import { useT } from '@/providers/LocaleProvider';
+import { Logo } from '@/components/brand/logo';
+import type { ColorTokens } from '@/lib/theme';
 
 export function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const c = useTokens();
+  const t = useT();
+  const styles = useMemo(() => makeStyles(c), [c]);
 
   const sections = ['overview', 'operations', 'financial', 'admin'] as const;
+  const fullName = user?.user_metadata?.full_name as string | undefined;
+  const initial = fullName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? 'U';
 
   return (
     <View style={styles.container}>
-      <View style={styles.logo}>
-        <View style={styles.logoIcon}>
-          <Ionicons name="car-sport" size={22} color={colors.white} />
-        </View>
-        <View>
-          <Text style={styles.logoTitle}>Overflow</Text>
-          <Text style={styles.logoSubtitle}>Rentals</Text>
-        </View>
+      <View style={styles.brand}>
+        <Logo size="md" showTagline={false} />
       </View>
 
       <ScrollView style={styles.nav} showsVerticalScrollIndicator={false}>
@@ -31,27 +34,31 @@ export function Sidebar() {
           if (items.length === 0) return null;
           return (
             <View key={section} style={styles.section}>
-              <Text style={styles.sectionLabel}>{SECTION_LABELS[section]}</Text>
+              <Text style={styles.sectionLabel}>{t(SECTION_KEYS[section])}</Text>
               {items.map((item) => {
                 const isActive =
                   pathname === item.href ||
                   (item.href !== '/(app)' && pathname.startsWith(item.href));
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={item.href}
-                    style={[styles.navItem, isActive && styles.navItemActive]}
+                    style={((state: { hovered?: boolean; pressed: boolean }) => [
+                      styles.navItem,
+                      isActive && styles.navItemActive,
+                      state.hovered && !isActive ? styles.navItemHover : null,
+                      state.pressed ? { opacity: 0.85 } : null,
+                    ]) as any}
                     onPress={() => router.push(item.href as any)}
-                    activeOpacity={0.7}
                   >
                     <Ionicons
                       name={isActive ? item.activeIcon : item.icon}
                       size={18}
-                      color={isActive ? colors.primary : colors.textMuted}
+                      color={isActive ? c.primary : c.textMuted}
                     />
                     <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
-                      {item.label}
+                      {t(item.labelKey)}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               })}
             </View>
@@ -62,142 +69,130 @@ export function Sidebar() {
       <View style={styles.footer}>
         <View style={styles.userInfo}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.user_metadata?.full_name?.[0]?.toUpperCase() ?? 'U'}
-            </Text>
+            <Text style={styles.avatarText}>{initial}</Text>
           </View>
           <View style={styles.userText}>
             <Text style={styles.userName} numberOfLines={1}>
-              {user?.user_metadata?.full_name ?? 'User'}
+              {fullName ?? user?.email?.split('@')[0] ?? 'User'}
             </Text>
             <Text style={styles.userEmail} numberOfLines={1}>
               {user?.email}
             </Text>
           </View>
         </View>
-        <TouchableOpacity onPress={signOut} style={styles.signOutBtn}>
-          <Ionicons name="log-out-outline" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+        <Pressable
+          onPress={signOut}
+          style={((state: { hovered?: boolean }) => [
+            styles.signOutBtn,
+            state.hovered ? { backgroundColor: c.surfaceHover } : null,
+          ]) as any}
+        >
+          <Ionicons name="log-out-outline" size={18} color={c.textMuted} />
+        </Pressable>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    width: 260,
-    backgroundColor: colors.backgroundCard,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-    paddingTop: spacing['3xl'],
-  },
-  logo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing['2xl'],
-  },
-  logoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    lineHeight: 20,
-  },
-  logoSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  nav: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionLabel: {
-    ...typography.caption,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  navItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.md,
-    marginBottom: 1,
-  },
-  navItemActive: {
-    backgroundColor: colors.primaryMuted,
-  },
-  navLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textMuted,
-  },
-  navLabelActive: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    gap: spacing.sm,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  userText: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  userEmail: {
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  signOutBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+function makeStyles(c: ColorTokens) {
+  return StyleSheet.create({
+    container: {
+      width: 264,
+      backgroundColor: c.backgroundCard,
+      borderRightWidth: 1,
+      borderRightColor: c.border,
+      paddingTop: spacing['3xl'],
+    },
+    brand: {
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing['2xl'],
+    },
+    nav: {
+      flex: 1,
+      paddingHorizontal: spacing.md,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: c.textMuted,
+      letterSpacing: 1.4,
+      textTransform: 'uppercase',
+      paddingHorizontal: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    navItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 9,
+      borderRadius: radius.md,
+      marginBottom: 2,
+    },
+    navItemHover: {
+      backgroundColor: c.backgroundHover,
+    },
+    navItemActive: {
+      backgroundColor: c.primaryMuted,
+    },
+    navLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: c.textMuted,
+    },
+    navLabelActive: {
+      color: c.primary,
+      fontWeight: '600',
+    },
+    footer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: c.border,
+      gap: spacing.sm,
+    },
+    userInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      flex: 1,
+    },
+    avatar: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: c.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      color: c.white,
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    userText: {
+      flex: 1,
+    },
+    userName: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: c.text,
+    },
+    userEmail: {
+      fontSize: 11,
+      color: c.textMuted,
+    },
+    signOutBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}

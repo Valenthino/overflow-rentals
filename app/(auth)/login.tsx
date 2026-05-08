@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,27 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/AuthProvider';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useT } from '@/providers/LocaleProvider';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { Logo } from '@/components/brand/logo';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const { tokens, typography } = useTheme();
+  const t = useT();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -27,7 +35,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError(t('auth.fill_all_fields'));
       return;
     }
     setLoading(true);
@@ -51,62 +59,57 @@ export default function LoginScreen() {
         >
           <View style={styles.container}>
             <View style={styles.logoSection}>
-              <View style={styles.logoIcon}>
-                <Ionicons name="car-sport" size={32} color={colors.white} />
-              </View>
-              <Text style={styles.logoTitle}>Overflow Rentals</Text>
-              <Text style={styles.logoSubtitle}>
-                Manage your Turo fleet like a pro
-              </Text>
+              <Logo size="xl" align="center" />
+              <Text style={styles.logoSubtitle}>{t('auth.welcome_subtitle')}</Text>
             </View>
 
             <View style={styles.form}>
               {error ? (
                 <View style={styles.errorBox}>
-                  <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                  <Ionicons name="alert-circle" size={16} color={tokens.danger} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
 
               <Input
-                label="Email"
-                placeholder="you@example.com"
+                label={t('auth.email')}
+                placeholder={t('auth.email_placeholder')}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
                 value={email}
                 onChangeText={setEmail}
-                leftIcon={<Ionicons name="mail-outline" size={18} color={colors.textMuted} />}
+                leftIcon={<Ionicons name="mail-outline" size={18} color={tokens.textMuted} />}
               />
 
               <Input
-                label="Password"
-                placeholder="••••••••"
+                label={t('auth.password')}
+                placeholder={t('auth.password_placeholder')}
                 secureTextEntry={!showPassword}
                 autoComplete="password"
                 value={password}
                 onChangeText={setPassword}
-                leftIcon={<Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />}
+                leftIcon={<Ionicons name="lock-closed-outline" size={18} color={tokens.textMuted} />}
                 rightIcon={
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <Pressable onPress={() => setShowPassword(!showPassword)}>
                     <Ionicons
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={18}
-                      color={colors.textMuted}
+                      color={tokens.textMuted}
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 }
               />
 
-              <TouchableOpacity
+              <Pressable
                 onPress={() => router.push('/(auth)/forgot-password' as any)}
                 style={styles.forgotBtn}
               >
-                <Text style={styles.forgotText}>Forgot password?</Text>
-              </TouchableOpacity>
+                <Text style={styles.forgotText}>{t('auth.forgot_password')}</Text>
+              </Pressable>
 
               <Button
-                title="Sign In"
+                title={t('auth.login')}
                 onPress={handleLogin}
                 loading={loading}
                 fullWidth
@@ -115,10 +118,10 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account?</Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                <Text style={styles.footerLink}> Sign Up</Text>
-              </TouchableOpacity>
+              <Text style={styles.footerText}>{t('auth.no_account')}</Text>
+              <Pressable onPress={() => router.push('/(auth)/register')}>
+                <Text style={styles.footerLink}>{t('auth.signup_cta')}</Text>
+              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -127,75 +130,53 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center' },
-  container: {
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-    padding: spacing.xl,
-  },
-  logoSection: {
-    alignItems: 'center',
-    marginBottom: spacing['4xl'],
-  },
-  logoIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  logoTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  logoSubtitle: {
-    ...typography.bodySmall,
-    marginTop: spacing.xs,
-  },
-  form: {
-    gap: spacing.lg,
-  },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.dangerMuted,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: 13,
-    flex: 1,
-  },
-  forgotBtn: {
-    alignSelf: 'flex-end',
-    marginTop: -spacing.sm,
-  },
-  forgotText: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: spacing['3xl'],
-  },
-  footerText: {
-    ...typography.bodySmall,
-  },
-  footerLink: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: c.background },
+    flex: { flex: 1 },
+    scrollContent: { flexGrow: 1, justifyContent: 'center' },
+    container: {
+      width: '100%',
+      maxWidth: 420,
+      alignSelf: 'center',
+      padding: spacing.xl,
+    },
+    logoSection: {
+      alignItems: 'center',
+      marginBottom: spacing['4xl'],
+      gap: spacing.md,
+    },
+    logoSubtitle: {
+      ...typography.bodySmall,
+      textAlign: 'center',
+    },
+    form: {
+      gap: spacing.lg,
+    },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: c.dangerMuted,
+      borderRadius: radius.md,
+      padding: spacing.md,
+    },
+    errorText: { color: c.danger, fontSize: 13, flex: 1 },
+    forgotBtn: {
+      alignSelf: 'flex-end',
+      marginTop: -spacing.sm,
+    },
+    forgotText: {
+      color: c.primary,
+      fontSize: 13,
+      fontWeight: '500',
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: spacing['3xl'],
+    },
+    footerText: { ...typography.bodySmall },
+    footerLink: { color: c.primary, fontSize: 13, fontWeight: '600' },
+  });
+}

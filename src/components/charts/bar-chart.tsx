@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import Svg, { Rect, G, Line, Text as SvgText } from 'react-native-svg';
+import React, { useId, useMemo } from 'react';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import Svg, { Rect, G, Line, Text as SvgText, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { scaleLinear, scaleBand } from 'd3-scale';
-import { colors, spacing, typography, radius } from '@/lib/theme';
+import { radius, spacing } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { formatCompact } from '@/lib/utils';
+import type { ColorTokens } from '@/lib/theme';
 
 interface BarData {
   label: string;
@@ -17,41 +20,40 @@ interface BarChartProps {
   horizontal?: boolean;
 }
 
-export function BarChart({
-  data,
-  height = 200,
-  barColor = colors.primary,
-  horizontal = false,
-}: BarChartProps) {
+export function BarChart({ data, height = 220, barColor, horizontal = false }: BarChartProps) {
+  const { tokens } = useTheme();
+  const { width } = useWindowDimensions();
+  const uid = useId().replace(/[:]/g, '');
+
   if (data.length === 0) return null;
 
-  const width = Dimensions.get('window').width - 64;
-  const chartWidth = Math.max(width, 300);
+  const color = barColor ?? tokens.primary;
+  const chartWidth = Math.min(Math.max(width - 80, 280), 900);
 
   if (horizontal) {
-    return <HorizontalBarChart data={data} height={height} barColor={barColor} />;
+    return <HorizontalBarChart data={data} barColor={color} tokens={tokens} />;
   }
 
-  const padding = { top: 10, right: 10, bottom: 40, left: 45 };
+  const padding = { top: 12, right: 12, bottom: 36, left: 48 };
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
   const maxVal = Math.max(...data.map((d) => d.value), 1);
 
-  const xScale = scaleBand<string>()
-    .domain(data.map((d) => d.label))
-    .range([0, innerWidth])
-    .padding(0.3);
-
-  const yScale = scaleLinear()
-    .domain([0, maxVal * 1.1])
-    .range([innerHeight, 0]);
+  const xScale = scaleBand<string>().domain(data.map((d) => d.label)).range([0, innerWidth]).padding(0.32);
+  const yScale = scaleLinear().domain([0, maxVal * 1.1]).range([innerHeight, 0]);
 
   const yTicks = yScale.ticks(4);
   const barWidth = xScale.bandwidth();
 
   return (
     <Svg width={chartWidth} height={height}>
+      <Defs>
+        <LinearGradient id={`barGrad-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor={color} stopOpacity={1} />
+          <Stop offset="100%" stopColor={color} stopOpacity={0.55} />
+        </LinearGradient>
+      </Defs>
       <G x={padding.left} y={padding.top}>
         {yTicks.map((tick) => (
           <G key={tick}>
@@ -60,12 +62,12 @@ export function BarChart({
               y1={yScale(tick)}
               x2={innerWidth}
               y2={yScale(tick)}
-              stroke={colors.border}
-              strokeWidth={0.5}
-              strokeDasharray="4,4"
+              stroke={tokens.chartGridLine}
+              strokeWidth={0.6}
+              strokeDasharray="3,5"
             />
-            <SvgText x={-8} y={yScale(tick) + 4} fontSize={10} fill={colors.textMuted} textAnchor="end">
-              {tick >= 1000 ? `${(tick / 1000).toFixed(0)}k` : tick.toFixed(0)}
+            <SvgText x={-8} y={yScale(tick) + 4} fontSize={10} fill={tokens.textMuted} textAnchor="end">
+              {formatCompact(tick)}
             </SvgText>
           </G>
         ))}
@@ -79,18 +81,17 @@ export function BarChart({
                 y={yScale(d.value)}
                 width={barWidth}
                 height={barH}
-                rx={4}
-                fill={d.color ?? barColor}
-                opacity={0.85}
+                rx={6}
+                fill={d.color ?? `url(#barGrad-${uid})`}
               />
               <SvgText
                 x={x + barWidth / 2}
                 y={innerHeight + 20}
                 fontSize={10}
-                fill={colors.textMuted}
+                fill={tokens.textMuted}
                 textAnchor="middle"
               >
-                {d.label.length > 6 ? d.label.slice(0, 6) : d.label}
+                {d.label.length > 8 ? `${d.label.slice(0, 8)}…` : d.label}
               </SvgText>
             </G>
           );
@@ -102,33 +103,33 @@ export function BarChart({
 
 function HorizontalBarChart({
   data,
-  height,
   barColor,
+  tokens,
 }: {
   data: BarData[];
-  height: number;
   barColor: string;
+  tokens: ColorTokens;
 }) {
   const maxVal = Math.max(...data.map((d) => d.value), 1);
-
+  const styles = useMemo(() => makeHStyles(tokens), [tokens]);
   return (
-    <View style={hStyles.container}>
+    <View style={styles.container}>
       {data.map((d) => {
         const pct = (d.value / maxVal) * 100;
         return (
-          <View key={d.label} style={hStyles.row}>
-            <Text style={hStyles.label} numberOfLines={1}>
+          <View key={d.label} style={styles.row}>
+            <Text style={styles.label} numberOfLines={1}>
               {d.label}
             </Text>
-            <View style={hStyles.barContainer}>
+            <View style={styles.barContainer}>
               <View
                 style={[
-                  hStyles.bar,
+                  styles.bar,
                   { width: `${pct}%`, backgroundColor: d.color ?? barColor },
                 ]}
               />
             </View>
-            <Text style={hStyles.value}>{d.value.toLocaleString()}</Text>
+            <Text style={styles.value}>{formatCompact(d.value)}</Text>
           </View>
         );
       })}
@@ -136,11 +137,19 @@ function HorizontalBarChart({
   );
 }
 
-const hStyles = StyleSheet.create({
-  container: { gap: spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  label: { ...typography.bodySmall, width: 80, textAlign: 'right' },
-  barContainer: { flex: 1, height: 20, backgroundColor: colors.surface, borderRadius: radius.sm },
-  bar: { height: '100%', borderRadius: radius.sm },
-  value: { ...typography.bodySmall, fontWeight: '600', color: colors.text, width: 60 },
-});
+function makeHStyles(c: ColorTokens) {
+  return StyleSheet.create({
+    container: { gap: spacing.sm },
+    row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    label: { fontSize: 13, color: c.textSecondary, width: 80, textAlign: 'right' },
+    barContainer: {
+      flex: 1,
+      height: 22,
+      backgroundColor: c.surface,
+      borderRadius: radius.sm,
+      overflow: 'hidden',
+    },
+    bar: { height: '100%', borderRadius: radius.sm },
+    value: { fontSize: 13, fontWeight: '600', color: c.text, width: 60 },
+  });
+}

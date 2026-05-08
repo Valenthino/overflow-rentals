@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Modal,
   FlatList,
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, typography, shadows } from '@/lib/theme';
+import { radius, spacing, shadows } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import type { ColorTokens } from '@/lib/theme';
 
 interface SelectOption {
   label: string;
@@ -28,44 +30,50 @@ interface SelectProps {
 
 export function Select({
   label,
-  placeholder = 'Select...',
+  placeholder = 'Select…',
   options,
   value,
   onValueChange,
   error,
   containerStyle,
 }: SelectProps) {
+  const { tokens, typography } = useTheme();
   const [open, setOpen] = useState(false);
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
   const selected = options.find((o) => o.value === value);
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <TouchableOpacity
-        style={[styles.trigger, error && styles.triggerError]}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
+      <Pressable
+        style={((state: { hovered?: boolean; pressed: boolean }) => [
+          styles.trigger,
+          error && styles.triggerError,
+          state.hovered && !error ? { borderColor: tokens.borderLight } : null,
+          state.pressed ? { opacity: 0.9 } : null,
+        ]) as any}
         onPress={() => setOpen(true)}
-        activeOpacity={0.7}
       >
         <Text style={[styles.triggerText, !selected && styles.placeholder]}>
           {selected?.label ?? placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
-      </TouchableOpacity>
-      {error && <Text style={styles.error}>{error}</Text>}
+        <Ionicons name="chevron-down" size={16} color={tokens.textMuted} />
+      </Pressable>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setOpen(false)}
-        >
+        <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
           <View style={[styles.dropdown, shadows.elevated]}>
             <FlatList
               data={options}
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.option, item.value === value && styles.optionActive]}
+                <Pressable
+                  style={((state: { hovered?: boolean }) => [
+                    styles.option,
+                    item.value === value && styles.optionActive,
+                    state.hovered && item.value !== value ? { backgroundColor: tokens.surfaceHover } : null,
+                  ]) as any}
                   onPress={() => {
                     onValueChange(item.value);
                     setOpen(false);
@@ -76,88 +84,66 @@ export function Select({
                   >
                     {item.label}
                   </Text>
-                  {item.value === value && (
-                    <Ionicons name="checkmark" size={16} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
+                  {item.value === value ? (
+                    <Ionicons name="checkmark" size={16} color={tokens.primary} />
+                  ) : null}
+                </Pressable>
               )}
             />
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.xs,
-  },
-  label: {
-    ...typography.label,
-    marginBottom: 2,
-  },
-  trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    height: 44,
-    paddingHorizontal: spacing.md,
-  },
-  triggerError: {
-    borderColor: colors.danger,
-  },
-  triggerText: {
-    fontSize: 15,
-    color: colors.text,
-    flex: 1,
-  },
-  placeholder: {
-    color: colors.textMuted,
-  },
-  error: {
-    fontSize: 12,
-    color: colors.danger,
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: spacing.xl,
-  },
-  dropdown: {
-    backgroundColor: colors.backgroundModal,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    maxHeight: 320,
-    width: '100%',
-    maxWidth: 400,
-    overflow: 'hidden',
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  optionActive: {
-    backgroundColor: colors.primaryMuted,
-  },
-  optionText: {
-    fontSize: 15,
-    color: colors.text,
-  },
-  optionTextActive: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    container: { gap: spacing.xs },
+    label: { ...typography.label, marginBottom: 2 },
+    trigger: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      height: 44,
+      paddingHorizontal: spacing.md,
+    },
+    triggerError: { borderColor: c.danger },
+    triggerText: { fontSize: 15, color: c.text, flex: 1 },
+    placeholder: { color: c.textMuted },
+    error: { fontSize: 12, color: c.danger },
+    overlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: c.overlay,
+      padding: spacing.xl,
+    },
+    dropdown: {
+      backgroundColor: c.backgroundModal,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: c.border,
+      maxHeight: 320,
+      width: '100%',
+      maxWidth: 400,
+      overflow: 'hidden',
+    },
+    option: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    optionActive: { backgroundColor: c.primaryMuted },
+    optionText: { fontSize: 15, color: c.text },
+    optionTextActive: { color: c.primary, fontWeight: '600' },
+  });
+}

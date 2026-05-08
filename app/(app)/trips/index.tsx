@@ -114,71 +114,132 @@ function parseCsvLine(line: string): string[] {
 }
 
 /**
- * Attempt to normalise a header name coming from a Turo CSV export into the
- * snake_case field name used in the database.
+ * Strip Turo's "{Owner Name}'s {Vehicle} (BC #PLATE)" prefix/suffix and
+ * return just the vehicle nickname. Examples:
+ *   "WENDSONGDO PRISCA's Subaru (BC #SK365R)" → "Subaru"
+ *   "John's Tesla Model 3 (CA #ABC123)"       → "Tesla Model 3"
+ *   "Subaru Outback 2015"                     → "Subaru Outback 2015"
  */
-function normaliseHeader(raw: string): string {
-  const lower = raw
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, '')
-    .trim()
-    .replace(/\s+/g, '_');
-
-  const MAP: Record<string, string> = {
-    reservation_id: 'reservation_id',
-    reservation: 'reservation_id',
-    vehicle: 'vehicle_name',
-    vehicle_name: 'vehicle_name',
-    guest: 'guest_name',
-    guest_name: 'guest_name',
-    status: 'status',
-    trip_start: 'start_date',
-    start_date: 'start_date',
-    start: 'start_date',
-    trip_end: 'end_date',
-    end_date: 'end_date',
-    end: 'end_date',
-    pickup_location: 'pickup_location',
-    pickup: 'pickup_location',
-    return_location: 'return_location',
-    return: 'return_location',
-    checkin_odometer: 'checkin_odometer',
-    checkout_odometer: 'checkout_odometer',
-    trip_price: 'trip_price',
-    price: 'trip_price',
-    total_discounts: 'total_discounts',
-    discounts: 'total_discounts',
-    extras: 'extras',
-    delivery_fee: 'delivery_fee',
-    delivery: 'delivery_fee',
-    other_fees: 'other_fees',
-    sales_tax: 'sales_tax',
-    tax: 'sales_tax',
-    host_fee: 'host_fee',
-    turo_fee: 'host_fee',
-    total_earnings: 'total_earnings',
-    earnings: 'total_earnings',
-    your_earnings: 'total_earnings',
-    host_earnings: 'total_earnings',
-    days: 'days',
-    trip_days: 'days',
-    source: 'source',
-    notes: 'notes',
-  };
-
-  return MAP[lower] || lower;
+function cleanVehicleName(raw: string): string {
+  if (!raw) return '';
+  let v = raw.trim();
+  const ownerSplit = v.match(/^.+?[’']s\s+(.+)$/);
+  if (ownerSplit) v = ownerSplit[1].trim();
+  v = v.replace(/\s*\([^)]*#[^)]+\)\s*$/, '').trim();
+  return v;
 }
 
 /**
- * Try to convert a date string from common Turo CSV formats (MM/DD/YYYY,
- * M/D/YYYY, YYYY-MM-DD) into ISO YYYY-MM-DD.
+ * Each Turo CSV column gets normalised to either a Trip field name or a
+ * `_bucket` key. Bucket keys (with leading underscore) are summed into
+ * their target field after parsing the row.
+ */
+const HEADER_MAP: Record<string, string> = {
+  // Identity
+  reservation_id: 'reservation_id',
+  reservation: 'reservation_id',
+  guest: 'guest_name',
+  guest_name: 'guest_name',
+  vehicle: '_vehicle_raw',
+  vehicle_name: 'vehicle_name',
+  vehicle_id: '_vehicle_external_id',
+  vin: '_vin',
+
+  // Status / dates / odometer
+  status: 'status',
+  trip_status: 'status',
+  trip_start: 'start_date',
+  start_date: 'start_date',
+  start: 'start_date',
+  trip_end: 'end_date',
+  end_date: 'end_date',
+  end: 'end_date',
+  pickup_location: 'pickup_location',
+  pickup: 'pickup_location',
+  return_location: 'return_location',
+  return: 'return_location',
+  checkin_odometer: 'checkin_odometer',
+  checkout_odometer: 'checkout_odometer',
+  distance_traveled: '_distance',
+  distance: '_distance',
+  trip_days: 'days',
+  days: 'days',
+
+  // Pricing
+  trip_price: 'trip_price',
+  price: 'trip_price',
+  boost_price: '_extras_bucket',
+  extras: '_extras_bucket',
+  excess_distance: '_extras_bucket',
+
+  // Discount buckets — Turo splits these across many columns; we sum.
+  '3day_discount': '_discount_bucket',
+  '1week_discount': '_discount_bucket',
+  '2week_discount': '_discount_bucket',
+  '3week_discount': '_discount_bucket',
+  '1month_discount': '_discount_bucket',
+  '2month_discount': '_discount_bucket',
+  '3month_discount': '_discount_bucket',
+  nonrefundable_discount: '_discount_bucket',
+  early_bird_discount: '_discount_bucket',
+  host_promotional_credit: '_discount_bucket',
+  total_discounts: '_discount_bucket',
+  discounts: '_discount_bucket',
+
+  // Fee buckets — sum into other_fees
+  cancellation_fee: '_other_fees_bucket',
+  additional_usage: '_other_fees_bucket',
+  late_fee: '_other_fees_bucket',
+  improper_return_fee: '_other_fees_bucket',
+  airport_operations_fee: '_other_fees_bucket',
+  airport_parking_credit: '_other_fees_bucket',
+  tolls_tickets: '_other_fees_bucket',
+  ontrip_ev_charging: '_other_fees_bucket',
+  posttrip_ev_charging: '_other_fees_bucket',
+  smoking: '_other_fees_bucket',
+  cleaning: '_other_fees_bucket',
+  fines_paid_to_host: '_other_fees_bucket',
+  gas_reimbursement: '_other_fees_bucket',
+  gas_fee: '_other_fees_bucket',
+  other_fees: '_other_fees_bucket',
+
+  // Specific direct mappings
+  delivery: 'delivery_fee',
+  delivery_fee: 'delivery_fee',
+  sales_tax: 'sales_tax',
+  tax: 'sales_tax',
+  host_fee: 'host_fee',
+  turo_fee: 'host_fee',
+  total_earnings: 'total_earnings',
+  earnings: 'total_earnings',
+  your_earnings: 'total_earnings',
+  host_earnings: 'total_earnings',
+
+  // Misc
+  source: 'source',
+  notes: 'notes',
+};
+
+function normaliseHeader(raw: string): string {
+  const lower = raw
+    .toLowerCase()
+    .replace(/&/g, '_')
+    .replace(/[^a-z0-9 ]/g, '')
+    .trim()
+    .replace(/\s+/g, '_');
+  return HEADER_MAP[lower] ?? lower;
+}
+
+/**
+ * Convert a Turo date string into ISO YYYY-MM-DD. Handles:
+ *   "2026-10-03 10:00 AM" / "2026-10-03T10:00:00Z" / "2026-10-03"
+ *   "10/3/2026" / "10/03/26"
  */
 function parseDate(raw: string): string | null {
   if (!raw) return null;
-  // Already ISO?
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
-  // MM/DD/YYYY or M/D/YYYY
-  const parts = raw.split('/');
+  const trimmed = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+  const parts = trimmed.split('/');
   if (parts.length === 3) {
     const [m, d, y] = parts;
     const month = m.padStart(2, '0');
@@ -186,57 +247,114 @@ function parseDate(raw: string): string | null {
     const year = y.length === 2 ? `20${y}` : y;
     return `${year}-${month}-${day}`;
   }
-  return raw; // Return raw as fallback
+  return null;
 }
 
 function parseStatus(raw: string): TripStatus {
-  const lower = raw.toLowerCase().trim();
-  if (lower === 'upcoming' || lower === 'booked' || lower === 'reserved') return 'upcoming';
-  if (lower === 'active' || lower === 'in progress' || lower === 'in_progress') return 'active';
-  if (lower === 'completed' || lower === 'done' || lower === 'finished' || lower === 'past') return 'completed';
-  if (lower === 'cancelled' || lower === 'canceled') return 'cancelled';
-  return 'completed'; // default for Turo historical data
+  const norm = raw.toLowerCase().trim().replace(/[\s\-_]+/g, '');
+  if (norm === 'upcoming' || norm === 'booked' || norm === 'reserved' || norm === 'confirmed') return 'upcoming';
+  if (norm === 'active' || norm === 'inprogress' || norm === 'ongoing') return 'active';
+  if (norm === 'completed' || norm === 'done' || norm === 'finished' || norm === 'past') return 'completed';
+  if (norm === 'cancelled' || norm === 'canceled') return 'cancelled';
+  return 'completed';
 }
 
+interface CsvParseResult {
+  rows: Partial<Trip>[];
+  warnings: { line: number; field: string; reason: string }[];
+}
+
+const DIRECT_NUMERIC_FIELDS = new Set([
+  'trip_price', 'delivery_fee', 'sales_tax', 'host_fee', 'total_earnings',
+]);
+
+const BUCKET_FIELDS = new Set([
+  '_discount_bucket', '_extras_bucket', '_other_fees_bucket',
+]);
+
 /**
- * Parse pasted CSV text into an array of partial Trip objects.
+ * Parse pasted CSV text into an array of partial Trip objects, summing
+ * Turo's many discount/fee subcolumns into the consolidated schema fields
+ * and stripping the owner prefix from the vehicle name.
  */
-function parseCsv(text: string): Partial<Trip>[] {
+function parseCsv(text: string): CsvParseResult {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
 
-  if (lines.length < 2) return [];
+  if (lines.length < 2) return { rows: [], warnings: [] };
 
   const headers = parseCsvLine(lines[0]).map(normaliseHeader);
   const results: Partial<Trip>[] = [];
+  const warnings: CsvParseResult['warnings'] = [];
+
+  const parseIntCell = (raw: string, lineNo: number, field: string): number => {
+    const cleaned = raw.replace(/[^0-9-]/g, '');
+    if (!cleaned || cleaned === '-') {
+      warnings.push({ line: lineNo, field, reason: `Non-numeric "${raw}" — defaulted to 0` });
+      return 0;
+    }
+    const num = parseInt(cleaned, 10);
+    if (!Number.isFinite(num)) {
+      warnings.push({ line: lineNo, field, reason: `Non-numeric "${raw}" — defaulted to 0` });
+      return 0;
+    }
+    return num;
+  };
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseCsvLine(lines[i]);
     if (values.length === 0) continue;
 
     const row: Record<string, unknown> = {};
+    let discountSum = 0;
+    let extrasSum = 0;
+    let otherFeesSum = 0;
+    let vehicleRaw = '';
+    let vehicleNameClean = '';
+    const distanceTraveled: number[] = [];
 
     headers.forEach((header, idx) => {
       const val = idx < values.length ? values[idx] : '';
       if (!val) return;
 
+      if (header === '_vehicle_raw') {
+        vehicleRaw = val;
+        return;
+      }
+      if (header === 'vehicle_name') {
+        vehicleNameClean = val;
+        return;
+      }
+      if (header === '_vehicle_external_id' || header === '_vin') {
+        return; // ignore
+      }
+      if (header === '_distance') {
+        const n = parseInt(val.replace(/[^0-9]/g, ''), 10);
+        if (Number.isFinite(n) && n > 0) distanceTraveled.push(n);
+        return;
+      }
+
+      if (BUCKET_FIELDS.has(header)) {
+        const n = parseDollar(val);
+        if (header === '_discount_bucket') discountSum += Math.abs(n);
+        else if (header === '_extras_bucket') extrasSum += Math.abs(n);
+        else if (header === '_other_fees_bucket') otherFeesSum += n;
+        return;
+      }
+
+      if (DIRECT_NUMERIC_FIELDS.has(header)) {
+        const n = parseDollar(val);
+        row[header] = header === 'sales_tax' ? Math.abs(n) : n;
+        return;
+      }
+
       switch (header) {
-        case 'trip_price':
-        case 'total_discounts':
-        case 'extras':
-        case 'delivery_fee':
-        case 'other_fees':
-        case 'sales_tax':
-        case 'host_fee':
-        case 'total_earnings':
-          row[header] = parseDollar(val);
-          break;
         case 'days':
         case 'checkin_odometer':
         case 'checkout_odometer':
-          row[header] = parseInt(val.replace(/[^0-9-]/g, '')) || 0;
+          row[header] = parseIntCell(val, i + 1, header);
           break;
         case 'start_date':
         case 'end_date':
@@ -251,21 +369,35 @@ function parseCsv(text: string): Partial<Trip>[] {
       }
     });
 
-    // Ensure required numeric fields default to 0
-    const numericFields = [
-      'trip_price', 'total_discounts', 'extras', 'delivery_fee',
-      'other_fees', 'sales_tax', 'host_fee', 'total_earnings', 'days',
-    ] as const;
-    numericFields.forEach((f) => {
+    // Prefer the clean "Vehicle name" (year + make + model) when present;
+    // otherwise strip "{Owner}'s … (BC #PLATE)" from the dirty "Vehicle".
+    if (vehicleNameClean) {
+      row.vehicle_name = vehicleNameClean;
+    } else if (vehicleRaw) {
+      row.vehicle_name = cleanVehicleName(vehicleRaw);
+    }
+
+    row.total_discounts = discountSum;
+    row.extras = extrasSum;
+    row.other_fees = otherFeesSum;
+
+    const allNumericFields = ['trip_price', 'total_discounts', 'extras', 'delivery_fee', 'other_fees', 'sales_tax', 'host_fee', 'total_earnings', 'days'] as const;
+    allNumericFields.forEach((f) => {
       if (row[f] === undefined) row[f] = 0;
     });
 
     if (!row.status) row.status = 'completed';
 
+    if (distanceTraveled.length > 0) {
+      const km = distanceTraveled[0];
+      const existing = typeof row.notes === 'string' ? row.notes + ' · ' : '';
+      row.notes = `${existing}Distance: ${km} km`;
+    }
+
     results.push(row as Partial<Trip>);
   }
 
-  return results;
+  return { rows: results, warnings };
 }
 
 // ---------------------------------------------------------------------------
@@ -295,6 +427,7 @@ export default function TripsScreen() {
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvText, setCsvText] = useState('');
   const [csvParsed, setCsvParsed] = useState<Partial<Trip>[]>([]);
+  const [csvWarnings, setCsvWarnings] = useState<{ line: number; field: string; reason: string }[]>([]);
   const [csvError, setCsvError] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState('');
@@ -417,13 +550,15 @@ export default function TripsScreen() {
   const handleParseCsv = () => {
     setCsvError('');
     setImportResult('');
+    setCsvWarnings([]);
     try {
-      const parsed = parseCsv(csvText);
-      if (parsed.length === 0) {
+      const { rows, warnings } = parseCsv(csvText);
+      if (rows.length === 0) {
         setCsvError('No valid rows found. Make sure your CSV has a header row and at least one data row.');
         return;
       }
-      setCsvParsed(parsed);
+      setCsvParsed(rows);
+      setCsvWarnings(warnings);
     } catch (e: any) {
       setCsvError(e.message || 'Failed to parse CSV data.');
     }
@@ -447,14 +582,16 @@ export default function TripsScreen() {
 
     setImporting(false);
     setImportResult(
-      `Imported ${successCount} trip${successCount !== 1 ? 's' : ''} successfully${failCount > 0 ? `, ${failCount} failed` : ''}.`
+      `Imported ${successCount} trip${successCount !== 1 ? 's' : ''} successfully${failCount > 0 ? `, ${failCount} failed` : ''}.`,
     );
     setCsvParsed([]);
+    setCsvWarnings([]);
   };
 
   const resetCsvModal = () => {
     setCsvText('');
     setCsvParsed([]);
+    setCsvWarnings([]);
     setCsvError('');
     setImportResult('');
     setShowCsvModal(false);
@@ -929,6 +1066,28 @@ export default function TripsScreen() {
           <View style={styles.csvErrorBox}>
             <Ionicons name="alert-circle" size={16} color={colors.danger} />
             <Text style={styles.csvErrorText}>{csvError}</Text>
+          </View>
+        ) : null}
+
+        {/* Warnings display */}
+        {csvWarnings.length > 0 ? (
+          <View style={[styles.csvErrorBox, { backgroundColor: colors.warningMuted }]}>
+            <Ionicons name="warning-outline" size={16} color={colors.warning} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.csvErrorText, { color: colors.warning, fontWeight: '600' }]}>
+                {csvWarnings.length} warning{csvWarnings.length !== 1 ? 's' : ''} (rows imported with defaults):
+              </Text>
+              {csvWarnings.slice(0, 5).map((w, i) => (
+                <Text key={i} style={[styles.csvErrorText, { color: colors.warning }]}>
+                  Line {w.line}, {w.field}: {w.reason}
+                </Text>
+              ))}
+              {csvWarnings.length > 5 ? (
+                <Text style={[styles.csvErrorText, { color: colors.warning }]}>
+                  …and {csvWarnings.length - 5} more
+                </Text>
+              ) : null}
+            </View>
           </View>
         ) : null}
 

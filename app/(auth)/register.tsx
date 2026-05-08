@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,27 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/AuthProvider';
+import { useTheme } from '@/providers/ThemeProvider';
+import { useT } from '@/providers/LocaleProvider';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { Logo } from '@/components/brand/logo';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { signUp } = useAuth();
+  const { tokens, typography } = useTheme();
+  const t = useT();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,15 +37,15 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields');
+      setError(t('auth.fill_all_fields'));
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('auth.password_too_short'));
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwords_no_match'));
       return;
     }
 
@@ -57,14 +65,14 @@ export default function RegisterScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.container, styles.centered]}>
           <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={48} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={48} color={tokens.success} />
           </View>
-          <Text style={styles.successTitle}>Check your email</Text>
+          <Text style={styles.successTitle}>{t('auth.check_email')}</Text>
           <Text style={styles.successText}>
-            We sent a confirmation link to {email}. Click it to activate your account.
+            {t('auth.check_email_signup', { email })}
           </Text>
           <Button
-            title="Back to Sign In"
+            title={t('auth.back_to_signin')}
             onPress={() => router.replace('/(auth)/login')}
             variant="outline"
             style={{ marginTop: spacing.xl }}
@@ -86,60 +94,61 @@ export default function RegisterScreen() {
         >
           <View style={styles.container}>
             <View style={styles.header}>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Start managing your Turo fleet today</Text>
+              <Logo size="lg" align="center" />
+              <Text style={styles.title}>{t('auth.create_account')}</Text>
+              <Text style={styles.subtitle}>{t('auth.create_account_subtitle')}</Text>
             </View>
 
             <View style={styles.form}>
               {error ? (
                 <View style={styles.errorBox}>
-                  <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                  <Ionicons name="alert-circle" size={16} color={tokens.danger} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               ) : null}
 
               <Input
-                label="Full Name"
-                placeholder="John Doe"
+                label={t('auth.full_name')}
+                placeholder={t('auth.full_name_placeholder')}
                 autoCapitalize="words"
                 autoComplete="name"
                 value={name}
                 onChangeText={setName}
-                leftIcon={<Ionicons name="person-outline" size={18} color={colors.textMuted} />}
+                leftIcon={<Ionicons name="person-outline" size={18} color={tokens.textMuted} />}
               />
 
               <Input
-                label="Email"
-                placeholder="you@example.com"
+                label={t('auth.email')}
+                placeholder={t('auth.email_placeholder')}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
                 value={email}
                 onChangeText={setEmail}
-                leftIcon={<Ionicons name="mail-outline" size={18} color={colors.textMuted} />}
+                leftIcon={<Ionicons name="mail-outline" size={18} color={tokens.textMuted} />}
               />
 
               <Input
-                label="Password"
-                placeholder="Min 8 characters"
+                label={t('auth.password')}
+                placeholder={t('auth.password_min')}
                 secureTextEntry
                 autoComplete="new-password"
                 value={password}
                 onChangeText={setPassword}
-                leftIcon={<Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />}
+                leftIcon={<Ionicons name="lock-closed-outline" size={18} color={tokens.textMuted} />}
               />
 
               <Input
-                label="Confirm Password"
-                placeholder="Re-enter password"
+                label={t('auth.confirm_password')}
+                placeholder={t('auth.confirm_password_placeholder')}
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                leftIcon={<Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />}
+                leftIcon={<Ionicons name="lock-closed-outline" size={18} color={tokens.textMuted} />}
               />
 
               <Button
-                title="Create Account"
+                title={t('auth.create_account')}
                 onPress={handleRegister}
                 loading={loading}
                 fullWidth
@@ -148,10 +157,10 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account?</Text>
-              <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-                <Text style={styles.footerLink}> Sign In</Text>
-              </TouchableOpacity>
+              <Text style={styles.footerText}>{t('auth.have_account')}</Text>
+              <Pressable onPress={() => router.replace('/(auth)/login')}>
+                <Text style={styles.footerLink}>{t('auth.signin_cta')}</Text>
+              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -160,49 +169,53 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center' },
-  container: {
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
-    padding: spacing.xl,
-  },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    marginBottom: spacing['3xl'],
-  },
-  title: {
-    ...typography.heading1,
-    textAlign: 'center',
-  },
-  subtitle: {
-    ...typography.bodySmall,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  form: {
-    gap: spacing.lg,
-  },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.dangerMuted,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  errorText: { color: colors.danger, fontSize: 13, flex: 1 },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: spacing['3xl'],
-  },
-  footerText: { ...typography.bodySmall },
-  footerLink: { color: colors.primary, fontSize: 13, fontWeight: '600' },
-  successIcon: { marginBottom: spacing.lg },
-  successTitle: { ...typography.heading2, textAlign: 'center', marginBottom: spacing.sm },
-  successText: { ...typography.bodySmall, textAlign: 'center', maxWidth: 300 },
-});
+function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: c.background },
+    flex: { flex: 1 },
+    scrollContent: { flexGrow: 1, justifyContent: 'center' },
+    container: {
+      width: '100%',
+      maxWidth: 420,
+      alignSelf: 'center',
+      padding: spacing.xl,
+    },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    header: {
+      marginBottom: spacing['3xl'],
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    title: {
+      ...typography.heading1,
+      textAlign: 'center',
+    },
+    subtitle: {
+      ...typography.bodySmall,
+      textAlign: 'center',
+      marginTop: -spacing.xs,
+    },
+    form: {
+      gap: spacing.lg,
+    },
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: c.dangerMuted,
+      borderRadius: radius.md,
+      padding: spacing.md,
+    },
+    errorText: { color: c.danger, fontSize: 13, flex: 1 },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: spacing['3xl'],
+    },
+    footerText: { ...typography.bodySmall },
+    footerLink: { color: c.primary, fontSize: 13, fontWeight: '600' },
+    successIcon: { marginBottom: spacing.lg },
+    successTitle: { ...typography.heading2, textAlign: 'center', marginBottom: spacing.sm },
+    successText: { ...typography.bodySmall, textAlign: 'center', maxWidth: 320 },
+  });
+}

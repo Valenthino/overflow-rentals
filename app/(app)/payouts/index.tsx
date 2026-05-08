@@ -64,6 +64,7 @@ export default function PayoutsScreen() {
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Payout | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({
     date: '',
     recipient: '',
@@ -83,6 +84,7 @@ export default function PayoutsScreen() {
       notes: '',
     });
     setEditing(null);
+    setFormError(null);
   };
 
   const openEdit = (p: Payout) => {
@@ -99,13 +101,31 @@ export default function PayoutsScreen() {
   };
 
   const handleSave = async () => {
+    setFormError(null);
+    const amountNum = form.amount ? parseFloat(form.amount) : NaN;
+    if (!form.recipient.trim()) {
+      setFormError('Recipient is required.');
+      return;
+    }
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      setFormError('Amount must be greater than zero.');
+      return;
+    }
+    if (form.date) {
+      const parsed = new Date(form.date);
+      if (Number.isNaN(parsed.getTime())) {
+        setFormError('Date must be a valid YYYY-MM-DD value.');
+        return;
+      }
+    }
+
     const payload = {
       date: form.date || new Date().toISOString().split('T')[0],
-      recipient: form.recipient,
+      recipient: form.recipient.trim(),
       type: form.type,
-      amount: form.amount ? parseFloat(form.amount) : 0,
-      description: form.description || null,
-      notes: form.notes || null,
+      amount: amountNum,
+      description: form.description?.trim() || null,
+      notes: form.notes?.trim() || null,
     };
 
     if (editing) {
@@ -261,6 +281,12 @@ export default function PayoutsScreen() {
         title={editing ? 'Edit Payout' : 'New Payout'}
         size="md"
       >
+        {formError ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.dangerMuted, padding: spacing.md, borderRadius: radius.md }}>
+            <Ionicons name="alert-circle" size={16} color={colors.danger} />
+            <Text style={{ color: colors.danger, fontSize: 13, flex: 1 }}>{formError}</Text>
+          </View>
+        ) : null}
         <View style={styles.formRow}>
           <Input
             label="Date"

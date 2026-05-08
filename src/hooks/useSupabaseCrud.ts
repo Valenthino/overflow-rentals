@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
 type TableName =
@@ -15,48 +15,47 @@ interface UseCrudOptions {
 
 export function useSupabaseCrud<T extends { id: string }>(
   table: TableName,
-  options?: UseCrudOptions
+  options?: UseCrudOptions,
 ) {
   const { user } = useAuth();
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const orderBy = options?.orderBy;
+  const ascending = options?.ascending;
+  const filtersKey = useMemo(() => JSON.stringify(options?.filters ?? {}), [options?.filters]);
+
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!user || !isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
 
     try {
-      let query = supabase
-        .from(table)
-        .select('*')
-        .eq('user_id', user.id);
+      let query = supabase.from(table).select('*').eq('user_id', user.id);
 
-      if (options?.filters) {
-        Object.entries(options.filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== '') {
-            query = query.eq(key, value);
-          }
-        });
-      }
+      const filters = JSON.parse(filtersKey) as Record<string, unknown>;
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          query = query.eq(key, value);
+        }
+      });
 
-      if (options?.orderBy) {
-        query = query.order(options.orderBy, { ascending: options.ascending ?? false });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
+      query = query.order(orderBy ?? 'created_at', { ascending: ascending ?? false });
 
       const { data: rows, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
       setData((rows as T[]) ?? []);
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.message ?? 'Failed to load');
     } finally {
       setLoading(false);
     }
-  }, [user, table, options?.orderBy, options?.ascending]);
+  }, [user, table, orderBy, ascending, filtersKey]);
 
   useEffect(() => {
     fetchData();
@@ -75,7 +74,6 @@ export function useSupabaseCrud<T extends { id: string }>(
 
   const update = async (id: string, updates: Record<string, unknown>) => {
     if (!user) return { error: 'Not authenticated' };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = supabase as any;
     const { error: updateError } = await client
       .from(table)
@@ -121,16 +119,24 @@ export function useSettings() {
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('settings')
-      .select('key, value')
-      .eq('user_id', user.id);
+    if (!user || !isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const { data } = await supabase
+        .from('settings')
+        .select('key, value')
+        .eq('user_id', user.id);
 
-    const map: Record<string, string> = {};
-    data?.forEach((row: any) => { map[row.key] = row.value; });
-    setSettings(map);
-    setLoading(false);
+      const map: Record<string, string> = {};
+      data?.forEach((row: any) => { map[row.key] = row.value; });
+      setSettings(map);
+    } catch (e) {
+      if (__DEV__) console.warn('[settings] fetch failed', e);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -139,10 +145,14 @@ export function useSettings() {
 
   const updateSetting = async (key: string, value: string) => {
     if (!user) return;
-    await supabase
-      .from('settings')
-      .upsert({ user_id: user.id, key, value } as any);
-    setSettings((prev) => ({ ...prev, [key]: value }));
+    try {
+      await supabase
+        .from('settings')
+        .upsert({ user_id: user.id, key, value } as any);
+      setSettings((prev) => ({ ...prev, [key]: value }));
+    } catch (e) {
+      if (__DEV__) console.warn('[settings] update failed', e);
+    }
   };
 
   return { settings, loading, updateSetting, refresh: fetchSettings };

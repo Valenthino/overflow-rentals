@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
-import { colors, radius, spacing } from '@/lib/theme';
+import { radius, spacing } from '@/lib/theme';
+import { useTokens } from '@/providers/ThemeProvider';
+import type { ColorTokens } from '@/lib/theme';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'purple';
 
@@ -11,27 +13,37 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-const variantColors: Record<BadgeVariant, { bg: string; text: string }> = {
-  default: { bg: colors.surface, text: colors.textSecondary },
-  success: { bg: colors.successMuted, text: colors.success },
-  warning: { bg: colors.warningMuted, text: colors.warning },
-  danger: { bg: colors.dangerMuted, text: colors.danger },
-  info: { bg: colors.infoMuted, text: colors.info },
-  purple: { bg: colors.primaryMuted, text: colors.primary },
-};
+function colorsForVariant(c: ColorTokens, variant: BadgeVariant): { bg: string; text: string } {
+  switch (variant) {
+    case 'success':
+      return { bg: c.successMuted, text: c.success };
+    case 'warning':
+      return { bg: c.warningMuted, text: c.warning };
+    case 'danger':
+      return { bg: c.dangerMuted, text: c.danger };
+    case 'info':
+      return { bg: c.infoMuted, text: c.info };
+    case 'purple':
+      return { bg: c.primaryMuted, text: c.primary };
+    case 'default':
+    default:
+      return { bg: c.surface, text: c.textSecondary };
+  }
+}
 
 export function Badge({ label, variant = 'default', size = 'sm', style }: BadgeProps) {
-  const c = variantColors[variant];
+  const c = useTokens();
+  const palette = useMemo(() => colorsForVariant(c, variant), [c, variant]);
   return (
     <View
       style={[
         styles.badge,
         size === 'md' && styles.badgeMd,
-        { backgroundColor: c.bg },
+        { backgroundColor: palette.bg },
         style,
       ]}
     >
-      <Text style={[styles.text, size === 'md' && styles.textMd, { color: c.text }]}>
+      <Text style={[styles.text, size === 'md' && styles.textMd, { color: palette.text }]}>
         {label}
       </Text>
     </View>

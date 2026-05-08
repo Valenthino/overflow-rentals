@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Modal as RNModal,
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, typography, shadows } from '@/lib/theme';
+import { radius, spacing, shadows } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import type { ColorTokens } from '@/lib/theme';
 
 interface ModalProps {
   visible: boolean;
@@ -21,9 +23,10 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-const { width } = Dimensions.get('window');
-
 export function Modal({ visible, onClose, title, children, size = 'md' }: ModalProps) {
+  const { tokens, typography } = useTheme();
+  const { width } = useWindowDimensions();
+  const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
   const maxWidth = size === 'sm' ? 400 : size === 'md' ? 520 : 680;
 
   return (
@@ -32,18 +35,22 @@ export function Modal({ visible, onClose, title, children, size = 'md' }: ModalP
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={[styles.container, { maxWidth: Math.min(maxWidth, width - 32) }, shadows.elevated]}>
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            <Text style={[typography.heading3, { flex: 1 }]}>{title}</Text>
+            <Pressable
+              onPress={onClose}
+              style={((state: { hovered?: boolean }) => [styles.closeBtn, state.hovered ? { backgroundColor: tokens.surfaceHover } : null]) as any}
+            >
+              <Ionicons name="close" size={20} color={tokens.textSecondary} />
+            </Pressable>
           </View>
           <ScrollView
             style={styles.body}
             contentContainerStyle={styles.bodyContent}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             {children}
           </ScrollView>
@@ -53,51 +60,49 @@ export function Modal({ visible, onClose, title, children, size = 'md' }: ModalP
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  container: {
-    width: '100%',
-    maxHeight: '85%',
-    backgroundColor: colors.backgroundModal,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  title: {
-    ...typography.heading3,
-    flex: 1,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-  },
-  body: {
-    flexGrow: 0,
-  },
-  bodyContent: {
-    padding: spacing.xl,
-    gap: spacing.lg,
-  },
-});
+function makeStyles(c: ColorTokens, _typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: c.overlay,
+    },
+    container: {
+      width: '100%',
+      maxHeight: '85%',
+      backgroundColor: c.backgroundModal,
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: c.border,
+      overflow: 'hidden',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    closeBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.surface,
+    },
+    body: {
+      flexGrow: 0,
+    },
+    bodyContent: {
+      padding: spacing.xl,
+      gap: spacing.lg,
+    },
+  });
+}

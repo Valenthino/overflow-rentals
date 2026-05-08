@@ -1,25 +1,30 @@
-import React from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   StyleSheet,
   ActivityIndicator,
+  Animated,
   type ViewStyle,
   type TextStyle,
+  type GestureResponderEvent,
 } from 'react-native';
-import { colors, radius, spacing } from '@/lib/theme';
+import { radius, spacing } from '@/lib/theme';
+import { useTokens } from '@/providers/ThemeProvider';
+import type { ColorTokens } from '@/lib/theme';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
   title: string;
-  onPress: () => void;
+  onPress: (e?: GestureResponderEvent) => void;
   variant?: Variant;
   size?: Size;
   disabled?: boolean;
   loading?: boolean;
   icon?: React.ReactNode;
+  iconRight?: React.ReactNode;
   style?: ViewStyle;
   textStyle?: TextStyle;
   fullWidth?: boolean;
@@ -33,86 +38,125 @@ export function Button({
   disabled = false,
   loading = false,
   icon,
+  iconRight,
   style,
   textStyle,
   fullWidth = false,
 }: ButtonProps) {
+  const c = useTokens();
   const isDisabled = disabled || loading;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const variantStyles = useMemo(() => makeVariants(c), [c]);
+  const styles = useMemo(() => makeStyles(c), [c]);
+
+  const onPressIn = () =>
+    Animated.spring(scale, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 0,
+    }).start();
+  const onPressOut = () =>
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 0,
+    }).start();
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={isDisabled}
-      activeOpacity={0.7}
-      style={[
-        styles.base,
-        variantStyles[variant],
-        sizeStyles[size],
-        fullWidth && styles.fullWidth,
-        isDisabled && styles.disabled,
-        style,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'primary' ? colors.white : colors.primary}
-        />
-      ) : (
-        <>
-          {icon}
-          <Text
-            style={[
-              styles.text,
-              variantTextStyles[variant],
-              sizeTextStyles[size],
-              icon ? { marginLeft: 6 } : undefined,
-              textStyle,
-            ]}
-          >
-            {title}
-          </Text>
-        </>
-      )}
-    </TouchableOpacity>
+    <Animated.View style={[{ transform: [{ scale }] }, fullWidth && styles.fullWidth, style]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        disabled={isDisabled}
+        style={((state: { hovered?: boolean }) => [
+          styles.base,
+          variantStyles[variant].container,
+          sizeStyles[size],
+          fullWidth && styles.fullWidth,
+          isDisabled && styles.disabled,
+          state.hovered && !isDisabled ? variantStyles[variant].hover : null,
+        ]) as any}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={variantStyles[variant].text.color as string} />
+        ) : (
+          <>
+            {icon}
+            <Text
+              style={[
+                styles.text,
+                variantStyles[variant].text,
+                sizeTextStyles[size],
+                icon ? { marginLeft: 6 } : undefined,
+                iconRight ? { marginRight: 6 } : undefined,
+                textStyle,
+              ]}
+            >
+              {title}
+            </Text>
+            {iconRight}
+          </>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.transparent,
-  },
-  text: {
-    fontWeight: '600',
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-});
+function makeStyles(c: ColorTokens) {
+  return StyleSheet.create({
+    base: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.transparent,
+    },
+    text: {
+      fontWeight: '600',
+    },
+    fullWidth: {
+      width: '100%',
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+  });
+}
 
-const variantStyles: Record<Variant, ViewStyle> = {
-  primary: { backgroundColor: colors.primary, borderColor: colors.primary },
-  secondary: { backgroundColor: colors.backgroundElevated, borderColor: colors.border },
-  outline: { backgroundColor: colors.transparent, borderColor: colors.border },
-  ghost: { backgroundColor: colors.transparent, borderColor: colors.transparent },
-  destructive: { backgroundColor: colors.danger, borderColor: colors.danger },
-};
-
-const variantTextStyles: Record<Variant, TextStyle> = {
-  primary: { color: colors.white },
-  secondary: { color: colors.text },
-  outline: { color: colors.text },
-  ghost: { color: colors.textSecondary },
-  destructive: { color: colors.white },
-};
+function makeVariants(c: ColorTokens): Record<Variant, { container: ViewStyle; text: TextStyle; hover: ViewStyle }> {
+  return {
+    primary: {
+      container: { backgroundColor: c.primary, borderColor: c.primary },
+      text: { color: c.white },
+      hover: { backgroundColor: c.primaryLight, borderColor: c.primaryLight },
+    },
+    secondary: {
+      container: { backgroundColor: c.backgroundElevated, borderColor: c.border },
+      text: { color: c.text },
+      hover: { backgroundColor: c.backgroundHover, borderColor: c.borderLight },
+    },
+    outline: {
+      container: { backgroundColor: c.transparent, borderColor: c.border },
+      text: { color: c.text },
+      hover: { backgroundColor: c.surfaceHover, borderColor: c.borderLight },
+    },
+    ghost: {
+      container: { backgroundColor: c.transparent, borderColor: c.transparent },
+      text: { color: c.textSecondary },
+      hover: { backgroundColor: c.surface },
+    },
+    destructive: {
+      container: { backgroundColor: c.danger, borderColor: c.danger },
+      text: { color: c.white },
+      hover: { backgroundColor: c.danger, borderColor: c.danger, opacity: 0.9 } as ViewStyle,
+    },
+  };
+}
 
 const sizeStyles: Record<Size, ViewStyle> = {
   sm: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, height: 32 },
