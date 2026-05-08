@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Animated, StyleSheet, type ViewStyle } from 'react-native';
-import { colors, radius } from '@/lib/theme';
+import { radius } from '@/lib/theme';
+import { useTokens } from '@/providers/ThemeProvider';
+import type { ColorTokens } from '@/lib/theme';
 
 interface SkeletonProps {
   width?: number | string;
@@ -15,14 +17,15 @@ export function Skeleton({
   borderRadius: br = radius.md,
   style,
 }: SkeletonProps) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const c = useTokens();
+  const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.6, duration: 800, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
-      ])
+        Animated.timing(opacity, { toValue: 0.7, duration: 900, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 900, useNativeDriver: true }),
+      ]),
     );
     animation.start();
     return () => animation.stop();
@@ -31,8 +34,8 @@ export function Skeleton({
   return (
     <Animated.View
       style={[
-        styles.base,
         {
+          backgroundColor: c.surface,
           width: width as number,
           height,
           borderRadius: br,
@@ -45,6 +48,8 @@ export function Skeleton({
 }
 
 export function SkeletonCard() {
+  const c = useTokens();
+  const styles = useMemo(() => makeCardStyles(c), [c]);
   return (
     <View style={styles.card}>
       <Skeleton width="40%" height={14} />
@@ -54,15 +59,14 @@ export function SkeletonCard() {
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    backgroundColor: colors.surface,
-  },
-  card: {
-    backgroundColor: colors.backgroundCard,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-  },
-});
+function makeCardStyles(c: ColorTokens) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: c.backgroundCard,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: 16,
+    },
+  });
+}

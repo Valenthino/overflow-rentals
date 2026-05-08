@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useId, useMemo } from 'react';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, {
   Path,
   Defs,
@@ -8,11 +8,13 @@ import Svg, {
   Line,
   Text as SvgText,
   G,
-  Rect,
+  Circle,
 } from 'react-native-svg';
 import { line, area, curveMonotoneX } from 'd3-shape';
 import { scaleLinear, scalePoint } from 'd3-scale';
-import { colors, spacing, typography } from '@/lib/theme';
+import { spacing } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { formatCompact } from '@/lib/utils';
 
 interface DataPoint {
   label: string;
@@ -32,34 +34,35 @@ interface AreaChartProps {
 
 export function AreaChart({
   data,
-  height = 220,
+  height = 240,
   showSecondary = false,
-  primaryColor = colors.primary,
-  secondaryColor = colors.chartGreen,
+  primaryColor,
+  secondaryColor,
   primaryLabel = 'Revenue',
   secondaryLabel = 'Profit',
 }: AreaChartProps) {
+  const { tokens, typography } = useTheme();
+  const { width } = useWindowDimensions();
+  const uid = useId().replace(/[:]/g, '');
+  const styles = useMemo(() => makeStyles(typography), [typography]);
+
   if (data.length === 0) return null;
 
-  const width = Dimensions.get('window').width - 64;
-  const chartWidth = Math.max(width, 300);
-  const padding = { top: 20, right: 16, bottom: 40, left: 50 };
+  const pColor = primaryColor ?? tokens.primary;
+  const sColor = secondaryColor ?? tokens.chartGreen;
+  const chartWidth = Math.min(Math.max(width - 80, 280), 900);
+  const padding = { top: 24, right: 16, bottom: 36, left: 50 };
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
 
   const allValues = data.flatMap((d) =>
-    showSecondary && d.secondaryValue != null ? [d.value, d.secondaryValue] : [d.value]
+    showSecondary && d.secondaryValue != null ? [d.value, d.secondaryValue] : [d.value],
   );
   const maxVal = Math.max(...allValues, 1);
   const minVal = Math.min(...allValues, 0);
 
-  const xScale = scalePoint<string>()
-    .domain(data.map((d) => d.label))
-    .range([0, innerWidth]);
-
-  const yScale = scaleLinear()
-    .domain([Math.min(minVal, 0), maxVal * 1.1])
-    .range([innerHeight, 0]);
+  const xScale = scalePoint<string>().domain(data.map((d) => d.label)).range([0, innerWidth]);
+  const yScale = scaleLinear().domain([Math.min(minVal, 0), maxVal * 1.1]).range([innerHeight, 0]);
 
   const lineGen = line<DataPoint>()
     .x((d) => xScale(d.label) ?? 0)
@@ -68,7 +71,7 @@ export function AreaChart({
 
   const areaGen = area<DataPoint>()
     .x((d) => xScale(d.label) ?? 0)
-    .y0(innerHeight)
+    .y0(yScale(0))
     .y1((d) => yScale(d.value))
     .curve(curveMonotoneX);
 
@@ -79,7 +82,7 @@ export function AreaChart({
 
   const secondaryAreaGen = area<DataPoint>()
     .x((d) => xScale(d.label) ?? 0)
-    .y0(innerHeight)
+    .y0(yScale(0))
     .y1((d) => yScale(d.secondaryValue ?? 0))
     .curve(curveMonotoneX);
 
@@ -93,31 +96,31 @@ export function AreaChart({
 
   return (
     <View>
-      {(primaryLabel || secondaryLabel) && (
-        <View style={styles.legend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: primaryColor }]} />
-            <Text style={styles.legendText}>{primaryLabel}</Text>
-          </View>
-          {showSecondary && (
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: secondaryColor }]} />
-              <Text style={styles.legendText}>{secondaryLabel}</Text>
-            </View>
-          )}
+      <View style={styles.legend}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: pColor }]} />
+          <Text style={styles.legendText}>{primaryLabel}</Text>
         </View>
-      )}
+        {showSecondary ? (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: sColor }]} />
+            <Text style={styles.legendText}>{secondaryLabel}</Text>
+          </View>
+        ) : null}
+      </View>
       <Svg width={chartWidth} height={height}>
         <Defs>
-          <LinearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor={primaryColor} stopOpacity={0.3} />
-            <Stop offset="100%" stopColor={primaryColor} stopOpacity={0.02} />
+          <LinearGradient id={`pGrad-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor={pColor} stopOpacity={0.42} />
+            <Stop offset="60%" stopColor={pColor} stopOpacity={0.12} />
+            <Stop offset="100%" stopColor={pColor} stopOpacity={0} />
           </LinearGradient>
-          <LinearGradient id="secondaryGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor={secondaryColor} stopOpacity={0.2} />
-            <Stop offset="100%" stopColor={secondaryColor} stopOpacity={0.02} />
+          <LinearGradient id={`sGrad-${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor={sColor} stopOpacity={0.28} />
+            <Stop offset="100%" stopColor={sColor} stopOpacity={0} />
           </LinearGradient>
         </Defs>
+
         <G x={padding.left} y={padding.top}>
           {yTicks.map((tick) => (
             <G key={tick}>
@@ -126,61 +129,62 @@ export function AreaChart({
                 y1={yScale(tick)}
                 x2={innerWidth}
                 y2={yScale(tick)}
-                stroke={colors.border}
-                strokeWidth={0.5}
-                strokeDasharray="4,4"
+                stroke={tokens.chartGridLine}
+                strokeWidth={0.6}
+                strokeDasharray="3,5"
               />
               <SvgText
-                x={-8}
+                x={-10}
                 y={yScale(tick) + 4}
                 fontSize={10}
-                fill={colors.textMuted}
+                fill={tokens.textMuted}
                 textAnchor="end"
               >
-                {tick >= 1000 ? `${(tick / 1000).toFixed(0)}k` : tick.toFixed(0)}
+                {formatCompact(tick)}
               </SvgText>
             </G>
           ))}
 
-          {showSecondary && (
+          {showSecondary ? (
             <>
-              <Path d={secondaryArea} fill="url(#secondaryGrad)" />
+              <Path d={secondaryArea} fill={`url(#sGrad-${uid})`} />
               <Path
                 d={secondaryPath}
-                stroke={secondaryColor}
+                stroke={sColor}
                 strokeWidth={2}
                 fill="none"
                 strokeDasharray="6,4"
+                strokeLinecap="round"
               />
             </>
-          )}
+          ) : null}
 
-          <Path d={primaryArea} fill="url(#primaryGrad)" />
-          <Path d={primaryPath} stroke={primaryColor} strokeWidth={2.5} fill="none" />
+          <Path d={primaryArea} fill={`url(#pGrad-${uid})`} />
+          <Path
+            d={primaryPath}
+            stroke={pColor}
+            strokeWidth={2.6}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
 
           {data.map((d, i) => {
             const cx = xScale(d.label) ?? 0;
             return (
-              <G key={d.label}>
-                <Rect
-                  x={cx - 3}
-                  y={yScale(d.value) - 3}
-                  width={6}
-                  height={6}
-                  rx={3}
-                  fill={primaryColor}
-                />
-                {i % labelStep === 0 && (
+              <G key={`${d.label}-${i}`}>
+                <Circle cx={cx} cy={yScale(d.value)} r={4.5} fill={tokens.backgroundCard} stroke={pColor} strokeWidth={2} />
+                {i % labelStep === 0 ? (
                   <SvgText
                     x={cx}
-                    y={innerHeight + 20}
+                    y={innerHeight + 22}
                     fontSize={10}
-                    fill={colors.textMuted}
+                    fill={tokens.textMuted}
                     textAnchor="middle"
                   >
                     {d.label}
                   </SvgText>
-                )}
+                ) : null}
               </G>
             );
           })}
@@ -190,24 +194,26 @@ export function AreaChart({
   );
 }
 
-const styles = StyleSheet.create({
-  legend: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-    marginBottom: spacing.sm,
-    paddingLeft: 50,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendText: {
-    ...typography.caption,
-  },
-});
+function makeStyles(typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
+    legend: {
+      flexDirection: 'row',
+      gap: spacing.lg,
+      marginBottom: spacing.sm,
+      paddingLeft: 50,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    legendText: {
+      ...typography.caption,
+    },
+  });
+}

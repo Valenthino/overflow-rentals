@@ -6,24 +6,30 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "overflow-rentals",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1f1f1f"
+      "backgroundColor": "#0F1115",
+      "dark": {
+        "image": "./assets/splash-icon.png",
+        "backgroundColor": "#0F1115"
+      }
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.overflowrentals.app"
+      "bundleIdentifier": "com.overflowrentals.app",
+      "userInterfaceStyle": "automatic"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1f1f1f"
+        "backgroundColor": "#0F1115"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.overflowrentals.app"
+      "package": "com.overflowrentals.app",
+      "userInterfaceStyle": "automatic"
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -44,6 +50,12 @@
         "projectId": "98bbd266-0134-4dd1-b25e-8c9a80a38d2a"
       }
     },
-    "owner": "vavqo"
+    "owner": "vavqo",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/98bbd266-0134-4dd1-b25e-8c9a80a38d2a"
+    }
   }
 }

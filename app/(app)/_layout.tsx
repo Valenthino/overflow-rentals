@@ -2,15 +2,16 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { Slot, useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
+import { useTokens } from '@/providers/ThemeProvider';
 import { Sidebar } from '@/components/shared/sidebar';
 import { BottomNav } from '@/components/shared/bottom-nav';
-import { colors } from '@/lib/theme';
 
 export default function AppLayout() {
   const { session, loading } = useAuth();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const c = useTokens();
 
   useEffect(() => {
     if (!loading && !session) {
@@ -22,9 +23,9 @@ export default function AppLayout() {
 
   if (isDesktop) {
     return (
-      <View style={styles.desktopContainer}>
+      <View style={[styles.desktopContainer, { backgroundColor: c.background }]}>
         <Sidebar />
-        <View style={styles.mainContent}>
+        <View style={[styles.mainContent, { backgroundColor: c.background }]}>
           <Slot />
         </View>
       </View>
@@ -32,7 +33,7 @@ export default function AppLayout() {
   }
 
   return (
-    <View style={styles.mobileContainer}>
+    <View style={[styles.mobileContainer, { backgroundColor: c.background }]}>
       <View style={styles.mobileContent}>
         <Slot />
       </View>
@@ -45,15 +46,12 @@ const styles = StyleSheet.create({
   desktopContainer: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: colors.background,
   },
   mainContent: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   mobileContainer: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   mobileContent: {
     flex: 1,
