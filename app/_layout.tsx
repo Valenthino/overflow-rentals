@@ -1,3 +1,6 @@
+// IMPORTANT: keep `polyfills` as the very first import — it registers
+// FormData / URL / URLSearchParams before any other module evaluates.
+import '@/lib/polyfills';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
