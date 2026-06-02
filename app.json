@@ -21,6 +21,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.overflowrentals.app",
       "userInterfaceStyle": "automatic",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      },
       "icon": {
         "light": "./assets/icon-light.png",
         "dark": "./assets/icon-dark.png"
