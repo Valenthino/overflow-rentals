@@ -18,7 +18,9 @@ import { KpiCard } from '@/components/charts/kpi-card';
 import { AreaChart } from '@/components/charts/area-chart';
 import { DonutChart } from '@/components/charts/donut-chart';
 import { BarChart } from '@/components/charts/bar-chart';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import { formatCurrency, formatPercent } from '@/lib/utils';
 import type { Trip, Expense, Payout, Vehicle } from '@/types/database';
 
@@ -79,6 +81,8 @@ export default function ReportsScreen() {
   const { settings } = useSettings();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens: colors, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, typography), [colors, typography]);
 
   const [activeTab, setActiveTab] = useState<TabKey>('pnl');
 
@@ -160,7 +164,7 @@ export default function ReportsScreen() {
       chartData,
       donutData,
     };
-  }, [trips, expenses, payouts]);
+  }, [trips, expenses, payouts, colors]);
 
   // ========== VEHICLE ANALYSIS ==========
   const vehicleAnalysis = useMemo(() => {
@@ -250,7 +254,7 @@ export default function ReportsScreen() {
       secondaryLabel,
       bracketData,
     };
-  }, [pnl.netProfit, country]);
+  }, [pnl.netProfit, country, colors]);
 
   // ========== RENDER ==========
   return (
@@ -797,7 +801,8 @@ export default function ReportsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
 
@@ -935,4 +940,5 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
-});
+  });
+}

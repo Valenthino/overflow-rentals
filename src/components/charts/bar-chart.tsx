@@ -86,6 +86,16 @@ export function BarChart({ data, height = 220, barColor, horizontal = false }: B
               />
               <SvgText
                 x={x + barWidth / 2}
+                y={yScale(d.value) - 6}
+                fontSize={10}
+                fontWeight="600"
+                fill={tokens.textSecondary}
+                textAnchor="middle"
+              >
+                {formatCompact(d.value)}
+              </SvgText>
+              <SvgText
+                x={x + barWidth / 2}
                 y={innerHeight + 20}
                 fontSize={10}
                 fill={tokens.textMuted}

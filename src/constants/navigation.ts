@@ -31,6 +31,9 @@ export const NAV_ITEMS: NavItem[] = [
 const BOTTOM_TAB_KEYS = new Set(['nav.dashboard', 'nav.fleet', 'nav.bookings', 'nav.trips', 'nav.reports']);
 export const BOTTOM_TAB_ITEMS = NAV_ITEMS.filter((item) => BOTTOM_TAB_KEYS.has(item.labelKey));
 
+// Everything not surfaced as a primary tab lives behind the "More" sheet on mobile.
+export const MORE_TAB_ITEMS = NAV_ITEMS.filter((item) => !BOTTOM_TAB_KEYS.has(item.labelKey));
+
 export const SECTION_KEYS: Record<NavItem['section'], string> = {
   overview: 'nav.overview',
   operations: 'nav.operations',

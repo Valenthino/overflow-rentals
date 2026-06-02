@@ -4,6 +4,7 @@ import Svg, { Rect } from 'react-native-svg';
 import { spacing } from '@/lib/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useT } from '@/providers/LocaleProvider';
+import { withAlpha } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { ColorTokens } from '@/lib/theme';
 
@@ -32,9 +33,9 @@ function getIntensity(count: number, max: number): number {
 function intensityColors(c: ColorTokens): string[] {
   return [
     c.surface,
-    'rgba(89, 60, 251, 0.20)',
-    'rgba(89, 60, 251, 0.40)',
-    'rgba(89, 60, 251, 0.65)',
+    withAlpha(c.primary, 0.2),
+    withAlpha(c.primary, 0.42),
+    withAlpha(c.primary, 0.66),
     c.primary,
   ];
 }

@@ -168,3 +168,14 @@ export function parseIntSafe(value: string | null | undefined): { value: number;
   const num = parseInt(cleaned, 10);
   return Number.isFinite(num) ? { value: num, ok: true } : { value: 0, ok: false };
 }
+
+/** Apply an alpha (0–1) to a hex color (#RGB or #RRGGBB) and return an rgba() string. */
+export function withAlpha(hex: string, alpha: number): string {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return hex;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}

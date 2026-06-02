@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,10 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { confirmDelete } from '@/lib/confirm';
 import { formatCurrency, getStatusColor } from '@/lib/utils';
 import type { Vehicle, VehicleStatus } from '@/types/database';
 
@@ -41,6 +44,8 @@ export default function FleetScreen() {
   const { data: vehicles, loading, refresh, create, update, remove } = useSupabaseCrud<Vehicle>('vehicles', { orderBy: 'created_at' });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens: colors, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, typography), [colors, typography]);
   const [showModal, setShowModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [form, setForm] = useState({
@@ -153,7 +158,9 @@ export default function FleetScreen() {
                     </View>
                     <TouchableOpacity
                       style={styles.deleteBtn}
-                      onPress={() => remove(v.id)}
+                      onPress={async () => {
+                        if (await confirmDelete(`${v.year} ${v.make} ${v.model}`)) remove(v.id);
+                      }}
                     >
                       <Ionicons name="trash-outline" size={14} color={colors.danger} />
                     </TouchableOpacity>
@@ -201,7 +208,8 @@ export default function FleetScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
   grid: { gap: spacing.md },
@@ -220,4 +228,5 @@ const styles = StyleSheet.create({
   formRow: { flexDirection: 'row', gap: spacing.md },
   formHalf: { flex: 1 },
   formActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.md },
-});
+  });
+}

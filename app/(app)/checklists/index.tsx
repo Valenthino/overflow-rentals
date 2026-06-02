@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenHeader } from '@/components/shared/screen-header';
 import { Card, CardContent } from '@/components/ui/card';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 
 const PRE_TRIP_STEPS = [
   'Exterior photos — all 4 sides + close-ups of any damage',
@@ -58,6 +60,8 @@ type ChecklistTab = 'pre' | 'post';
 export default function ChecklistsScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens: colors, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, typography), [colors, typography]);
   const [activeTab, setActiveTab] = useState<ChecklistTab>('pre');
   const [preChecked, setPreChecked] = useState<boolean[]>(
     new Array(PRE_TRIP_STEPS.length).fill(false)
@@ -296,7 +300,8 @@ export default function ChecklistsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
 
@@ -455,4 +460,5 @@ const styles = StyleSheet.create({
     color: colors.success,
     opacity: 0.8,
   },
-});
+  });
+}

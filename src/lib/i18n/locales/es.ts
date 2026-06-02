@@ -2,7 +2,7 @@ import type { Translations } from './en';
 
 export const es: Translations = {
   app: {
-    name: 'Overflow Rentals',
+    name: 'Overflow Fleet',
     tagline: 'La plataforma todo en uno para anfitriones de Turo',
   },
   common: {

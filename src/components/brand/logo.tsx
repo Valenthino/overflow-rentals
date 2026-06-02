@@ -1,59 +1,66 @@
 import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Line, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useTokens } from '@/providers/ThemeProvider';
 import { useT } from '@/providers/LocaleProvider';
-import { spacing } from '@/lib/theme';
 
 interface LogoMarkProps {
   size?: number;
+  /** Force the whole mark into a single color (monochrome) — e.g. on a colored surface. */
   color?: string;
-  withGradient?: boolean;
 }
 
-export function LogoMark({ size = 64, color, withGradient = true }: LogoMarkProps) {
+/**
+ * The Overflow Fleet "OV" mark: a ring ("O"), a purple "V" whose right arm
+ * rises into an upward trend line, and an ascending bar chart.
+ * The ring adapts to the theme (white on dark, charcoal on light) so it stays
+ * legible in both modes; the V / trend / bars keep the brand purple.
+ */
+export function LogoMark({ size = 64, color }: LogoMarkProps) {
   const c = useTokens();
-  const stroke = color ?? c.brand;
-  const fill = color ?? c.brand;
-  const gradId = 'logoGrad';
+  const uid = React.useId().replace(/[:]/g, '');
+  const mono = color != null;
+  const oColor = color ?? c.text;
+  const purple = mono ? color : `url(#ovV-${uid})`;
+  const speed = mono ? color : `url(#ovSpeed-${uid})`;
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 120 120" fill="none">
-      {withGradient ? (
-        <Defs>
-          <LinearGradient id={gradId} x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor={c.brand} />
-            <Stop offset="1" stopColor={c.brandDark} />
-          </LinearGradient>
-        </Defs>
-      ) : null}
+    <Svg width={size} height={size * 0.75} viewBox="0 0 128 96" fill="none">
+      <Defs>
+        <LinearGradient id={`ovV-${uid}`} x1="50" y1="73" x2="116" y2="22" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor={c.primaryDark} />
+          <Stop offset="1" stopColor={c.primaryLight} />
+        </LinearGradient>
+        <LinearGradient id={`ovSpeed-${uid}`} x1="0" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor={c.primaryLight} stopOpacity={0.12} />
+          <Stop offset="1" stopColor={c.primary} stopOpacity={0.9} />
+        </LinearGradient>
+      </Defs>
 
-      <Path
-        d="M22 64 C22 50 28 42 36 38 L46 30 C50 27 56 25 60 25 C64 25 70 27 74 30 L84 38 C92 42 98 50 98 64 L98 74 C98 78 96 80 92 80 L88 80 C86 80 84 78 84 76 L84 72 L36 72 L36 76 C36 78 34 80 32 80 L28 80 C24 80 22 78 22 74 Z"
-        fill={withGradient ? `url(#${gradId})` : fill}
-        opacity={0.95}
-      />
-      <Path
-        d="M30 60 L34 50 L86 50 L90 60 Z"
-        fill={c.backgroundCard}
-        opacity={0.18}
-      />
-      <Circle cx="38" cy="74" r="4.5" fill={c.backgroundCard} opacity={0.5} />
-      <Circle cx="82" cy="74" r="4.5" fill={c.backgroundCard} opacity={0.5} />
+      {/* speed lines */}
+      <Line x1={2} y1={38} x2={13} y2={38} stroke={speed} strokeWidth={3.6} strokeLinecap="round" />
+      <Line x1={0} y1={47} x2={13} y2={47} stroke={speed} strokeWidth={3.6} strokeLinecap="round" />
+      <Line x1={4} y1={56} x2={13} y2={56} stroke={speed} strokeWidth={3.6} strokeLinecap="round" />
 
+      {/* O */}
+      <Circle cx={38} cy={47} r={19} stroke={oColor} strokeWidth={12.5} fill="none" />
+
+      {/* V rising into an upward trend line */}
       <Path
-        d="M60 56 C52 56 46 62 46 70 C46 80 60 96 60 96 C60 96 74 80 74 70 C74 62 68 56 60 56 Z"
-        fill={withGradient ? `url(#${gradId})` : fill}
-      />
-      <Circle cx="60" cy="69" r="9" fill={c.backgroundCard} />
-      <Path
-        d="M55 70 L58.5 73.5 L65 66.5"
-        stroke={stroke}
-        strokeWidth={2.4}
+        d="M50 38 L64 73 L90 33 L116 24"
+        stroke={purple}
+        strokeWidth={12.5}
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
+
+      {/* ascending bar chart */}
+      <Rect x={88} y={71} width={5.5} height={9} rx={1.6} fill={purple} />
+      <Rect x={96.5} y={67} width={5.5} height={13} rx={1.6} fill={purple} />
+      <Rect x={105} y={62} width={5.5} height={18} rx={1.6} fill={purple} />
+      <Rect x={113.5} y={56} width={5.5} height={24} rx={1.6} fill={purple} />
+      <Line x1={86} y1={82} x2={121} y2={82} stroke={purple} strokeWidth={2.4} strokeLinecap="round" />
     </Svg>
   );
 }

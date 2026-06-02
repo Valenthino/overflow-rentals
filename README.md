@@ -1,6 +1,8 @@
-# Overflow Rentals
+# Overflow Fleet
 
 The all-in-one platform for Turo hosts. A cross-platform SaaS that runs on **iOS, Android, and the web** from a single Expo + React Native codebase.
+
+> The product is branded **Overflow Fleet** (OVF). The GitHub repository keeps its original `overflow-rentals` slug.
 
 > Live web: **https://turo-business-app.expo.app**
 

@@ -1,6 +1,6 @@
 export const en = {
   app: {
-    name: 'Overflow Rentals',
+    name: 'Overflow Fleet',
     tagline: 'The all-in-one platform for Turo hosts',
   },
   common: {

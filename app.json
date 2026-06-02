@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Overflow Rentals",
+    "name": "Overflow Fleet",
     "slug": "turo-business-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,23 +9,27 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0F1115",
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#ECEAF7",
       "dark": {
-        "image": "./assets/splash-icon.png",
-        "backgroundColor": "#0F1115"
+        "image": "./assets/splash.png",
+        "backgroundColor": "#ECEAF7"
       }
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.overflowrentals.app",
-      "userInterfaceStyle": "automatic"
+      "userInterfaceStyle": "automatic",
+      "icon": {
+        "light": "./assets/icon-light.png",
+        "dark": "./assets/icon-dark.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0F1115"
+        "backgroundColor": "#FFFFFF"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.overflowrentals.app",
@@ -34,7 +38,14 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "name": "Overflow Fleet",
+      "shortName": "OVF",
+      "description": "The all-in-one platform for Turo hosts.",
+      "lang": "en",
+      "display": "standalone",
+      "themeColor": "#593CFB",
+      "backgroundColor": "#ECEAF7"
     },
     "plugins": [
       "expo-router",
