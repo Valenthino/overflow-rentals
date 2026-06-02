@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,10 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { confirmDelete } from '@/lib/confirm';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { Maintenance, MaintenanceType, Vehicle } from '@/types/database';
 
@@ -77,6 +80,8 @@ export default function MaintenanceScreen() {
   const { data: vehicles } = useSupabaseCrud<Vehicle>('vehicles');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens: colors, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, typography), [colors, typography]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Maintenance | null>(null);
   const [form, setForm] = useState({
@@ -302,7 +307,7 @@ export default function MaintenanceScreen() {
                       </View>
                       <TouchableOpacity
                         style={styles.deleteBtn}
-                        onPress={() => remove(m.id)}
+                        onPress={async () => { if (await confirmDelete(m.vehicle_name || 'this record')) remove(m.id); }}
                       >
                         <Ionicons
                           name="trash-outline"
@@ -427,7 +432,8 @@ export default function MaintenanceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
   grid: { gap: spacing.md },
@@ -493,4 +499,5 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
-});
+  });
+}

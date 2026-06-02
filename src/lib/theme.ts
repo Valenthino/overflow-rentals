@@ -1,8 +1,10 @@
 import { StyleSheet, Platform, Dimensions } from 'react-native';
 
-const BRAND = '#1F3A52';
-const BRAND_LIGHT = '#2C547A';
-const BRAND_DARK = '#152736';
+// Brand charcoal — the dark "O" of the Overflow Fleet mark.
+const BRAND = '#222838';
+const BRAND_LIGHT = '#2E3647';
+const BRAND_DARK = '#171C28';
+// Brand purple — the "V" / trend / bars of the mark.
 const ACCENT = '#593CFB';
 const ACCENT_LIGHT = '#7B62FC';
 

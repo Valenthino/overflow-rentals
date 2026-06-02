@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   useWindowDimensions, RefreshControl,
@@ -14,7 +14,10 @@ import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { confirmDelete } from '@/lib/confirm';
 import { formatDate, daysRemaining, formatCurrency } from '@/lib/utils';
 import type { Booking, BookingStatus, Vehicle } from '@/types/database';
 
@@ -38,6 +41,8 @@ export default function BookingsScreen() {
   const { data: vehicles } = useSupabaseCrud<Vehicle>('vehicles');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens: colors, typography } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, typography), [colors, typography]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Booking | null>(null);
   const [form, setForm] = useState({
@@ -135,7 +140,7 @@ export default function BookingsScreen() {
                           <CardContent style={{ paddingTop: spacing.lg }}>
                             <View style={styles.bookingHeader}>
                               <Badge label={b.status} variant={BADGE_MAP[b.status]} />
-                              <TouchableOpacity onPress={() => remove(b.id)}>
+                              <TouchableOpacity onPress={async () => { if (await confirmDelete(b.vehicle_name || 'this booking')) remove(b.id); }}>
                                 <Ionicons name="trash-outline" size={14} color={colors.danger} />
                               </TouchableOpacity>
                             </View>
@@ -232,7 +237,8 @@ export default function BookingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
   section: { marginBottom: spacing.xl },
@@ -258,4 +264,5 @@ const styles = StyleSheet.create({
   formRow: { flexDirection: 'row', gap: spacing.md },
   formHalf: { flex: 1 },
   formActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.md },
-});
+  });
+}

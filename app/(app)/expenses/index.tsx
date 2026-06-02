@@ -21,7 +21,10 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { KpiCard } from '@/components/charts/kpi-card';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { confirmDelete } from '@/lib/confirm';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { Expense, ExpenseCategory, Vehicle } from '@/types/database';
 
@@ -70,23 +73,25 @@ const CATEGORY_ICON: Record<ExpenseCategory, React.ComponentProps<typeof Ionicon
   other: 'ellipsis-horizontal-outline',
 };
 
-const CATEGORY_COLOR: Record<ExpenseCategory, string> = {
-  fuel: colors.chartOrange,
-  insurance: colors.chartBlue,
-  maintenance: colors.chartRed,
-  cleaning: colors.chartCyan,
-  tolls_tickets: colors.warning,
-  parking: colors.chartPink,
-  registration: colors.chartGreen,
-  financing: colors.chartPurple,
-  supplies: '#8B5CF6',
-  software: colors.info,
-  marketing: colors.chartPink,
-  office: colors.textMuted,
-  professional: colors.primary,
-  depreciation: colors.danger,
-  other: colors.textSecondary,
-};
+function categoryColors(colors: ColorTokens): Record<ExpenseCategory, string> {
+  return {
+    fuel: colors.chartOrange,
+    insurance: colors.chartBlue,
+    maintenance: colors.chartRed,
+    cleaning: colors.chartCyan,
+    tolls_tickets: colors.warning,
+    parking: colors.chartPink,
+    registration: colors.chartGreen,
+    financing: colors.chartPurple,
+    supplies: '#8B5CF6',
+    software: colors.info,
+    marketing: colors.chartPink,
+    office: colors.textMuted,
+    professional: colors.primary,
+    depreciation: colors.danger,
+    other: colors.textSecondary,
+  };
+}
 
 export default function ExpensesScreen() {
   const { data: expenses, loading, refresh, create, update, remove } =
@@ -94,6 +99,9 @@ export default function ExpensesScreen() {
   const { data: vehicles } = useSupabaseCrud<Vehicle>('vehicles');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens: colors, typography } = useTheme();
+  const CATEGORY_COLOR = useMemo(() => categoryColors(colors), [colors]);
+  const styles = useMemo(() => makeStyles(colors, typography), [colors, typography]);
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
@@ -305,7 +313,7 @@ export default function ExpensesScreen() {
                   </View>
                   <TouchableOpacity
                     style={styles.deleteBtn}
-                    onPress={() => remove(e.id)}
+                    onPress={async () => { if (await confirmDelete(e.description || getCategoryLabel(e.category))) remove(e.id); }}
                   >
                     <Ionicons
                       name="trash-outline"
@@ -448,7 +456,8 @@ export default function ExpensesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
   kpiRow: {
@@ -525,4 +534,5 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
-});
+  });
+}

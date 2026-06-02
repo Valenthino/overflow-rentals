@@ -20,7 +20,10 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { KpiCard } from '@/components/charts/kpi-card';
-import { colors, spacing, radius, typography } from '@/lib/theme';
+import { spacing, radius } from '@/lib/theme';
+import type { ColorTokens } from '@/lib/theme';
+import { useTheme } from '@/providers/ThemeProvider';
+import { confirmDelete } from '@/lib/confirm';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import type { Payout, PayoutType } from '@/types/database';
 
@@ -48,19 +51,24 @@ const TYPE_ICON: Record<PayoutType, React.ComponentProps<typeof Ionicons>['name'
   other: 'ellipsis-horizontal-outline',
 };
 
-const TYPE_COLOR: Record<PayoutType, string> = {
-  owner_draw: colors.primary,
-  salary: colors.info,
-  bonus: colors.success,
-  reimbursement: colors.warning,
-  other: colors.textMuted,
-};
+function payoutTypeColors(colors: ColorTokens): Record<PayoutType, string> {
+  return {
+    owner_draw: colors.primary,
+    salary: colors.info,
+    bonus: colors.success,
+    reimbursement: colors.warning,
+    other: colors.textMuted,
+  };
+}
 
 export default function PayoutsScreen() {
   const { data: payouts, loading, refresh, create, update, remove } =
     useSupabaseCrud<Payout>('payouts', { orderBy: 'date', ascending: false });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+  const { tokens: colors, typography } = useTheme();
+  const TYPE_COLOR = useMemo(() => payoutTypeColors(colors), [colors]);
+  const styles = useMemo(() => makeStyles(colors, typography), [colors, typography]);
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Payout | null>(null);
@@ -256,7 +264,7 @@ export default function PayoutsScreen() {
                   </View>
                   <TouchableOpacity
                     style={styles.deleteBtn}
-                    onPress={() => remove(p.id)}
+                    onPress={async () => { if (await confirmDelete(p.recipient || 'this payout')) remove(p.id); }}
                   >
                     <Ionicons
                       name="trash-outline"
@@ -350,7 +358,8 @@ export default function PayoutsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorTokens, typography: ReturnType<typeof import('@/lib/theme').makeTypography>) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { padding: spacing.lg, paddingBottom: spacing['5xl'] },
   kpiRow: { gap: spacing.md, paddingBottom: spacing.xl },
@@ -401,4 +410,5 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
   },
-});
+  });
+}
