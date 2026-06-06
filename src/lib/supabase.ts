@@ -80,6 +80,11 @@ function makeStubClient(): SupabaseClient<Database> {
           signUp: reject,
           signOut: async () => ({ error }),
           resetPasswordForEmail: reject,
+          exchangeCodeForSession: reject,
+          setSession: reject,
+          verifyOtp: reject,
+          resend: reject,
+          updateUser: reject,
         };
       }
       if (prop === 'from') {
@@ -100,7 +105,12 @@ export const supabase: SupabaseClient<Database> = env.isConfigured
         storage: Platform.OS === 'web' ? webStorage : nativeStorage,
         autoRefreshToken: true,
         persistSession: true,
+        // Web parses the session out of the URL automatically after an email
+        // link redirect. Native does it explicitly via createSessionFromUrl().
         detectSessionInUrl: Platform.OS === 'web',
+        // PKCE is the secure, single-flow path that works for both the web
+        // redirect and the native deep link (email links come back as ?code=).
+        flowType: 'pkce',
       },
     })
   : makeStubClient();

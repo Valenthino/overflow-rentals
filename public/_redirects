@@ -1,0 +1,3 @@
+# SPA fallback for Cloudflare Pages / Netlify.
+# Every route resolves to the single Expo Router shell (web.output: "single").
+/*    /index.html   200

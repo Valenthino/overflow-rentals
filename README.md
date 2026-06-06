@@ -158,6 +158,10 @@ Paste your Turo "Trip earnings" CSV export directly into **Trips → Import CSV*
 
 ## EAS / deployment
 
+> **Full guide:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) covers the Supabase
+> auth URL/SMTP setup, web hosting on Hostinger or Cloudflare Pages, mobile builds
+> on the Expo free tier, and the security checklist.
+
 ```bash
 # Local dev build (faster than EAS for iteration)
 npx expo run:ios

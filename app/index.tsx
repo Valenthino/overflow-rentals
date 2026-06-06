@@ -9,7 +9,7 @@ import { missingEnvVars, isSupabaseConfigured } from '@/lib/supabase';
 import { spacing, radius } from '@/lib/theme';
 
 export default function Index() {
-  const { session, loading, configured } = useAuth();
+  const { session, loading, configured, recoveryMode } = useAuth();
   const router = useRouter();
   const c = useTokens();
   const t = useT();
@@ -17,12 +17,16 @@ export default function Index() {
   useEffect(() => {
     if (loading) return;
     if (!configured) return;
-    if (session) {
+    // A password-reset link was opened — send the user to set a new password,
+    // even though the recovery exchange has already created a session.
+    if (recoveryMode) {
+      router.replace('/(auth)/reset-password' as any);
+    } else if (session) {
       router.replace('/(app)');
     } else {
       router.replace('/(auth)/login');
     }
-  }, [session, loading, configured]);
+  }, [session, loading, configured, recoveryMode]);
 
   if (!isSupabaseConfigured) {
     return (
