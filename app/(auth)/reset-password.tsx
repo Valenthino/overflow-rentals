@@ -20,37 +20,22 @@ import { Logo } from '@/components/brand/logo';
 import { spacing, radius } from '@/lib/theme';
 import type { ColorTokens } from '@/lib/theme';
 
-export default function RegisterScreen() {
+export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { signUp, resendConfirmation } = useAuth();
+  const { updatePassword, endRecoveryMode } = useAuth();
   const { tokens, typography } = useTheme();
   const t = useT();
   const styles = useMemo(() => makeStyles(tokens, typography), [tokens, typography]);
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [done, setDone] = useState(false);
 
-  const handleResend = async () => {
-    setResending(true);
-    setError('');
-    const result = await resendConfirmation(email.trim());
-    if (result.error) {
-      setError(result.error.message);
-    } else {
-      setResent(true);
-    }
-    setResending(false);
-  };
-
-  const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
+  const handleUpdate = async () => {
+    if (!password || !confirmPassword) {
       setError(t('auth.fill_all_fields'));
       return;
     }
@@ -65,42 +50,35 @@ export default function RegisterScreen() {
 
     setLoading(true);
     setError('');
-    const result = await signUp(email.trim(), password, name.trim());
+    const result = await updatePassword(password);
     if (result.error) {
       setError(result.error.message);
     } else {
-      setSuccess(true);
+      setDone(true);
     }
     setLoading(false);
   };
 
-  if (success) {
+  const finish = () => {
+    endRecoveryMode();
+    router.replace('/(app)');
+  };
+
+  if (done) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.container, styles.centered]}>
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={48} color={tokens.success} />
           </View>
-          <Text style={styles.successTitle}>{t('auth.check_email')}</Text>
-          <Text style={styles.successText}>
-            {t('auth.check_email_signup', { email })}
-          </Text>
-          {resent ? (
-            <Text style={styles.resentText}>{t('auth.resend_done')}</Text>
-          ) : (
-            <Button
-              title={t('auth.resend_email')}
-              onPress={handleResend}
-              loading={resending}
-              variant="ghost"
-              style={{ marginTop: spacing.lg }}
-            />
-          )}
+          <Text style={styles.title}>{t('auth.password_updated')}</Text>
+          <Text style={styles.subtitle}>{t('auth.password_updated_body')}</Text>
           <Button
-            title={t('auth.back_to_signin')}
-            onPress={() => router.replace('/(auth)/login')}
-            variant="outline"
-            style={{ marginTop: spacing.sm }}
+            title={t('auth.continue')}
+            onPress={finish}
+            fullWidth
+            size="lg"
+            style={{ marginTop: spacing.xl }}
           />
         </View>
       </SafeAreaView>
@@ -120,8 +98,8 @@ export default function RegisterScreen() {
           <View style={styles.container}>
             <View style={styles.header}>
               <Logo size="lg" align="center" />
-              <Text style={styles.title}>{t('auth.create_account')}</Text>
-              <Text style={styles.subtitle}>{t('auth.create_account_subtitle')}</Text>
+              <Text style={styles.title}>{t('auth.set_new_password')}</Text>
+              <Text style={styles.subtitle}>{t('auth.set_new_password_subtitle')}</Text>
             </View>
 
             <View style={styles.form}>
@@ -133,59 +111,40 @@ export default function RegisterScreen() {
               ) : null}
 
               <Input
-                label={t('auth.full_name')}
-                placeholder={t('auth.full_name_placeholder')}
-                autoCapitalize="words"
-                autoComplete="name"
-                value={name}
-                onChangeText={setName}
-                leftIcon={<Ionicons name="person-outline" size={18} color={tokens.textMuted} />}
-              />
-
-              <Input
-                label={t('auth.email')}
-                placeholder={t('auth.email_placeholder')}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                value={email}
-                onChangeText={setEmail}
-                leftIcon={<Ionicons name="mail-outline" size={18} color={tokens.textMuted} />}
-              />
-
-              <Input
-                label={t('auth.password')}
+                label={t('auth.new_password')}
                 placeholder={t('auth.password_min')}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 autoComplete="new-password"
                 value={password}
                 onChangeText={setPassword}
                 leftIcon={<Ionicons name="lock-closed-outline" size={18} color={tokens.textMuted} />}
+                rightIcon={
+                  <Pressable onPress={() => setShowPassword(!showPassword)}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={18}
+                      color={tokens.textMuted}
+                    />
+                  </Pressable>
+                }
               />
 
               <Input
                 label={t('auth.confirm_password')}
                 placeholder={t('auth.confirm_password_placeholder')}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 leftIcon={<Ionicons name="lock-closed-outline" size={18} color={tokens.textMuted} />}
               />
 
               <Button
-                title={t('auth.create_account')}
-                onPress={handleRegister}
+                title={t('auth.update_password')}
+                onPress={handleUpdate}
                 loading={loading}
                 fullWidth
                 size="lg"
               />
-            </View>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>{t('auth.have_account')}</Text>
-              <Pressable onPress={() => router.replace('/(auth)/login')}>
-                <Text style={styles.footerLink}>{t('auth.signin_cta')}</Text>
-              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -211,18 +170,13 @@ function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/
       alignItems: 'center',
       gap: spacing.md,
     },
-    title: {
-      ...typography.heading1,
-      textAlign: 'center',
-    },
+    title: { ...typography.heading1, textAlign: 'center' },
     subtitle: {
       ...typography.bodySmall,
       textAlign: 'center',
       marginTop: -spacing.xs,
     },
-    form: {
-      gap: spacing.lg,
-    },
+    form: { gap: spacing.lg },
     errorBox: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -232,21 +186,6 @@ function makeStyles(c: ColorTokens, typography: ReturnType<typeof import('@/lib/
       padding: spacing.md,
     },
     errorText: { color: c.danger, fontSize: 13, flex: 1 },
-    footer: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      marginTop: spacing['3xl'],
-    },
-    footerText: { ...typography.bodySmall },
-    footerLink: { color: c.primary, fontSize: 13, fontWeight: '600' },
     successIcon: { marginBottom: spacing.lg },
-    successTitle: { ...typography.heading2, textAlign: 'center', marginBottom: spacing.sm },
-    successText: { ...typography.bodySmall, textAlign: 'center', maxWidth: 320 },
-    resentText: {
-      ...typography.bodySmall,
-      color: c.success,
-      textAlign: 'center',
-      marginTop: spacing.lg,
-    },
   });
 }
